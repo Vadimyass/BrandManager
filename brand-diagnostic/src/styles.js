@@ -105,6 +105,9 @@ export const CSS = `
 .bd .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:bdspin 1s linear infinite}
 @keyframes bdspin{to{transform:rotate(360deg)}}
 .bd .center{display:flex;flex-direction:column;align-items:center;gap:18px;padding:60px 0;text-align:center}
+.bd .quote{max-width:46ch;animation:fadeUp .7s cubic-bezier(.2,.8,.2,1) both}
+.bd .qtext{font-family:var(--disp);font-weight:500;font-size:21px;line-height:1.45;letter-spacing:-.01em}
+.bd .qauthor{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:.06em}
 .bd .err{background:#fff;border:1px solid var(--line);border-left:3px solid var(--no);border-radius:0 14px 14px 0;padding:16px;font-size:14.5px;color:var(--ink);line-height:1.5}
 .bd .foot{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:26px}
 @media(prefers-reduced-motion:reduce){.bd *{transition:none!important;animation:none!important}}

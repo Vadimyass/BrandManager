@@ -26,8 +26,14 @@ const COMMON = [
   { id: "offer_ease", type: "scale", axis: "positioning", q: "Насколько легко объяснить продукт одной фразой?", sub: "0 — каждый раз по-разному · 5 — фраза отлетает" },
   { id: "one_look", type: "scale", axis: "consistency", q: "Насколько твои страницы выглядят как одно целое?", sub: "Представь стор, сайт и соцсети рядом." },
   { id: "stand_out", type: "scale", axis: "differentiation", q: "Насколько твой стиль отличается от соседей по нише?", sub: "0 — сольюсь с толпой · 5 — узнают сразу" },
+  { id: "hero_duo", type: "duo", axis: "positioning", q: "Кто герой твоей главной страницы?", sub: "Загляни на неё и ответь честно.", left: "Мой продукт", right: "Пользователь" },
+  { id: "onliness", type: "scale", axis: "differentiation", q: "Насколько легко закончить: «Мы единственные, кто…»?", sub: "0 — фраза не складывается · 5 — отлетает без запинки" },
+  { id: "why_phrase", type: "scale", axis: "positioning", q: "Насколько легко сказать, почему ты это делаешь?", sub: "Одной фразой, без слова «качественный»." },
   { id: "tone_duo", type: "duo", axis: "tone", q: "Твой бренд по характеру ближе к…", left: "Друг", right: "Эксперт" },
+  { id: "party_duo", type: "duo", axis: "tone", q: "Твой бренд на вечеринке — кто он?", left: "Душа компании", right: "Глубокий собеседник" },
   { id: "goal_duo", type: "duo", axis: "tone", q: "Что сейчас важнее?", left: "Доверие", right: "Заметность" },
+  { id: "feel_now_duo", type: "duo", axis: "tone", q: "Каким бренд ощущается сейчас?", left: "Тёплым", right: "Строгим" },
+  { id: "feel_want_duo", type: "duo", axis: "tone", q: "А каким хочешь, чтобы ощущался?", left: "Тёплым", right: "Строгим" },
   { id: "state_duo", type: "duo", axis: "tone", q: "Бренд сегодня скорее…", left: "Стихийный", right: "Собранный" },
 ];
 

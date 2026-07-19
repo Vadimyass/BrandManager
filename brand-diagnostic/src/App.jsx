@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AXES, BUILDING_OPTIONS, buildQuestions, LEVELS, LINK_FIELDS } from "./cards.js";
 import { diagnose, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
@@ -12,6 +12,34 @@ const EMPTY_ANSWERS = {
 
 const FLY_MS = 420;
 const SWIPE_THRESHOLD = 90;
+
+const QUOTES = [
+  { text: "Бренд — это то, что говорят о тебе, когда тебя нет в комнате", author: "Джефф Безос" },
+  { text: "Дизайн — это не то, как вещь выглядит, а то, как она работает", author: "Стив Джобс" },
+  { text: "Люди покупают не то, что ты делаешь, а то, почему ты это делаешь", author: "Саймон Синек" },
+  { text: "Логотип — это не бренд. Логотип — указатель на бренд", author: "Марти Ньюмайер" },
+  { text: "Хороший дизайн очевиден. Великий дизайн прозрачен", author: "Джо Спарано" },
+  { text: "Если ты не бренд — ты товар", author: "Филип Котлер" },
+  { text: "Простота — высшая форма изысканности", author: "девиз первого буклета Apple" },
+  { text: "Стиль — способ сказать, кто ты, не говоря ни слова", author: "Рэйчел Зои" },
+  { text: "Лучшая реклама — это довольный клиент", author: "Филип Котлер" },
+  { text: "Твой бренд — это обещание, которое ты держишь каждый день", author: "правило любого сильного бренда" },
+];
+
+function Quotes() {
+  const [i, setI] = useState(() => Math.floor(Math.random() * QUOTES.length));
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % QUOTES.length), 10000);
+    return () => clearInterval(t);
+  }, []);
+  const q = QUOTES[i];
+  return (
+    <div className="quote" key={i}>
+      <div className="qtext">«{q.text}»</div>
+      <div className="qauthor">— {q.author}</div>
+    </div>
+  );
+}
 
 function Deck({ questions, onDone }) {
   const [idx, setIdx] = useState(0);
@@ -285,10 +313,8 @@ export default function App() {
         {phase === "analyzing" && (
           <div className="center phase">
             <div className="spin" />
-            <div>
-              <div className="eyebrow" style={{ color: "var(--violet)" }}>Анализирую</div>
-              <div style={{ fontFamily: "var(--disp)", fontSize: 22, marginTop: 8 }}>Ассессор сверяет ответы с рубрикой, валидатор проверяет ассессора…</div>
-            </div>
+            <div className="eyebrow" style={{ color: "var(--violet)" }}>Анализирую твой бренд</div>
+            <Quotes />
           </div>
         )}
 
