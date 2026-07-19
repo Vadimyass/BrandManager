@@ -1,0 +1,4 @@
+project_id = "brand-diagnostic"
+
+[functions.api]
+verify_jwt = false
