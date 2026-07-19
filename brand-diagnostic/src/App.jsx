@@ -164,6 +164,9 @@ function Deck({ questions, onDone }) {
       {card && card.type === "duo" && (
         <div className="deckbtns">
           <button className="dbtn no" onClick={() => commit(card.left, -1)}>{card.left}</button>
+          {card.skippable && (
+            <button className="dbtn skip" onClick={() => commit(card.skipValue ?? "skip", -1)}>{card.skipLabel ?? "Не знаю"}</button>
+          )}
           <button className="dbtn yes" onClick={() => commit(card.right, 1)}>{card.right}</button>
         </div>
       )}
@@ -181,16 +184,24 @@ export default function App() {
   const [feedbackSent, setFeedbackSent] = useState(null);
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
+  const [probe, setProbe] = useState(null);
+  const [round, setRound] = useState(0);
 
   const set = (id, v) => setAnswers((a) => ({ ...a, [id]: v }));
   const setLink = (id, v) => setAnswers((a) => ({ ...a, links: { ...a.links, [id]: v } }));
   const setScore = (axis, v) => setAnswers((a) => ({ ...a, selfScores: { ...a.selfScores, [axis]: v } }));
 
-  async function assess(finalAnswers = answers) {
+  async function assess(finalAnswers = answers, r = round) {
     setPhase("analyzing");
     setError("");
     try {
-      const res = await diagnose(finalAnswers, true);
+      const res = await diagnose(finalAnswers, true, r);
+      if (res.status === "probe") {
+        setProbe(res.cards);
+        setRound(res.round + 1);
+        setPhase("probe");
+        return;
+      }
       setResult(res.result);
       setDiagnosticId(res.id);
       setPhase("result");
@@ -203,6 +214,7 @@ export default function App() {
   const reset = () => {
     setPhase("intro"); setAnswers(EMPTY_ANSWERS); setQuestions([]); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail("");
+    setProbe(null); setRound(0);
   };
 
   async function giveFeedback(verdict) {
@@ -307,6 +319,23 @@ export default function App() {
               <button className="btn ghost" onClick={() => setPhase("links")}>Назад</button>
               <button className="btn amber" disabled={!scoresReady} onClick={() => assess()}>Оценить бренд</button>
             </div>
+          </div>
+        )}
+
+        {phase === "probe" && probe && (
+          <div className="phase" key={`probe-${round}`}>
+            <div className="qnum">Хочу понять точнее</div>
+            <div className="q">Ещё {probe.length} вопрос{probe.length >= 5 ? "ов" : "а"} — именно про твой бренд</div>
+            <div className="hint">По ответам осталась пара белых пятен. Закроем — и оценка будет честной.</div>
+            <Deck
+              questions={probe}
+              onDone={(cards) => {
+                const merged = { ...answers, cards: [...answers.cards, ...cards] };
+                setAnswers(merged);
+                setProbe(null);
+                assess(merged, round);
+              }}
+            />
           </div>
         )}
 

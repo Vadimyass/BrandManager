@@ -5,6 +5,7 @@ import {
   LEVEL_NAMES,
   runAssessor,
   runGate,
+  runProbeGen,
   runValidator,
 } from "./agents.ts";
 import type { LlmUsage } from "./llm.ts";
@@ -50,8 +51,11 @@ Deno.serve(async (req) => {
   }
 });
 
-async function diagnose(body: { answers: Answers; skipGate?: boolean }) {
+const MAX_PROBE_ROUNDS = 2;
+
+async function diagnose(body: { answers: Answers; skipGate?: boolean; round?: number }) {
   const { answers, skipGate } = body;
+  const round = body.round ?? 0;
   const hasCards = (answers?.cards?.length ?? 0) >= 10;
   if (!answers?.building || (!hasCards && (!answers?.offer || !answers?.selfBrand))) {
     throw new Error("answers incomplete");
@@ -68,6 +72,17 @@ async function diagnose(body: { answers: Answers; skipGate?: boolean }) {
   }
 
   let assessment = await runAssessor(answers, usage);
+
+  const unclear = assessment.unclearAxes ?? [];
+  if (round < MAX_PROBE_ROUNDS && unclear.length > 0) {
+    try {
+      const cards = await runProbeGen(answers, unclear, usage);
+      if (cards.length >= 2) return { status: "probe", cards, axes: unclear, round };
+    } catch (e) {
+      console.error("probe generation failed, falling through to final result:", e);
+    }
+  }
+
   let validation = await runValidator(answers, assessment, usage);
   let retried = false;
   if (!validation.approved) {
@@ -95,12 +110,15 @@ async function diagnose(body: { answers: Answers; skipGate?: boolean }) {
   return { status: "ok", id: data.id, result: assessment };
 }
 
-// Правило рубрики детерминировано: общий уровень = слабейшая ось, модели не доверяем арифметику.
+// Правило рубрики детерминировано, модели не доверяем арифметику.
+// Среднее двух слабейших: одна пустая ось не топит весь бренд в L1, но слабые звенья решают.
 function enforceWeakestLinkRule(a: Assessment) {
   const scores = (a.axes ?? []).map((x) => Number(x.score)).filter((n) => n >= 1 && n <= 5);
   if (scores.length !== 5) throw new Error("assessor returned malformed axes");
-  a.overallLevel = Math.min(...scores);
+  const [w1, w2] = scores.sort((x, y) => x - y);
+  a.overallLevel = Math.max(1, Math.floor((w1 + w2) / 2));
   a.levelName = LEVEL_NAMES[a.overallLevel - 1];
+  delete a.unclearAxes;
 }
 
 async function feedback(body: { id: string; verdict: "accurate" | "miss" }) {
