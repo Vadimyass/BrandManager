@@ -58,14 +58,14 @@ Deno.serve(async (req) => {
   }
 });
 
-async function deck(body: { seedAnswers: SeedAnswer[]; name?: string }) {
-  const { seedAnswers, name } = body;
+async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string }) {
+  const { seedAnswers, name, niche } = body;
   if (!seedAnswers?.length || seedAnswers.length < 2) throw new Error("seed answers incomplete");
 
   const usage: LlmUsage[] = [];
-  const calibration = await runCalibrator(seedAnswers, name, usage);
-  let cards = await runGenerator(calibration, seedAnswers, name, usage);
-  if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, usage);
+  const calibration = await runCalibrator(seedAnswers, name, niche, usage);
+  let cards = await runGenerator(calibration, seedAnswers, name, niche, usage);
+  if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, niche, usage);
   if (cards.length < 5) throw new Error("deck generation failed");
 
   return { status: "ok", calibration, cards, usage };
@@ -73,6 +73,7 @@ async function deck(body: { seedAnswers: SeedAnswer[]; name?: string }) {
 
 interface DiagnosePayload {
   name?: string;
+  niche?: string;
   seedAnswers: SeedAnswer[];
   calibration: Calibration;
   decisions: Decision[];
@@ -102,7 +103,7 @@ async function diagnose(body: DiagnosePayload) {
   const { data, error } = await db
     .from("diagnostics")
     .insert({
-      input: { name: body.name, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
+      input: { name: body.name, niche: body.niche, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
       result: { ...diagnosis, sprints },
       validator: { ...validation, retried },
       usage,

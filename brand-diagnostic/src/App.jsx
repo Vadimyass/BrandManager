@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AXIS_LABELS, LINK_FIELDS, SEED_CARDS } from "./cards.js";
+import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { diagnose, getDeck, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -147,6 +147,7 @@ function Deck({ questions, onDone }) {
 export default function App() {
   const [phase, setPhase] = useState("intro");
   const [name, setName] = useState("");
+  const [niche, setNiche] = useState("");
   const [seedAnswers, setSeedAnswers] = useState([]);
   const [calibration, setCalibration] = useState(null);
   const [tradeoffs, setTradeoffs] = useState([]);
@@ -177,7 +178,7 @@ export default function App() {
     setSeedAnswers(seed);
     guard(async () => {
       setPhase("prep");
-      const data = await getDeck(seed, name);
+      const data = await getDeck(seed, name, niche);
       setCalibration(data.calibration);
       setDeckUsage(data.usage ?? []);
       setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
@@ -205,7 +206,7 @@ export default function App() {
   function assess(finalLinks = links, ds = decisions) {
     guard(async () => {
       setPhase("analyzing");
-      const res = await diagnose({ name, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage });
+      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage });
       setResult(res.result);
       setDiagnosticId(res.id);
       setPhase("result");
@@ -213,7 +214,7 @@ export default function App() {
   }
 
   const reset = () => {
-    setPhase("intro"); setName(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
+    setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]);
   };
@@ -249,8 +250,25 @@ export default function App() {
             <div style={{ margin: "22px 0 18px" }}>
               <input className="field" style={{ maxWidth: 340 }} placeholder="Название проекта (необязательно)" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <button className="btn" onClick={() => setPhase("seed")}>Начать</button>
+            <button className="btn" onClick={() => setPhase("niche")}>Начать</button>
             <div className="foot">Бета · колода генерируется под твою нишу</div>
+          </div>
+        )}
+
+        {phase === "niche" && (
+          <div className="phase">
+            <div className="qnum">Шаг 1</div>
+            <div className="q">Чем занимаешься?</div>
+            <div className="hint">Своими словами, без умных терминов — дальше всё подстроится под тебя.</div>
+            <div className="row" style={{ marginTop: 10 }}>
+              {NICHE_OPTIONS.map((o) => (
+                <button key={o} className={"chip" + (niche === o ? " on" : "")} onClick={() => setNiche(o)}>{o}</button>
+              ))}
+            </div>
+            <div className="nav">
+              <button className="btn ghost" onClick={() => setPhase("intro")}>Назад</button>
+              <button className="btn" disabled={!niche} onClick={() => setPhase("seed")}>Дальше</button>
+            </div>
           </div>
         )}
 
