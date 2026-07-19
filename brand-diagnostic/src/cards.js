@@ -14,7 +14,17 @@ export const LEVELS = [
   { n: 5, name: "Магнит" },
 ];
 
-export const BUILDING_OPTIONS = ["Приложение", "Игра", "SaaS", "Сервис", "Личный бренд", "Другое"];
+export const BUILDING_OPTIONS = ["Приложение", "Игра", "SaaS", "Магазин / e-com", "Локальный бизнес / услуги", "Сервис", "Личный бренд", "Другое"];
+
+export const AXIS_LABELS = {
+  positioning: "Позиционирование",
+  visual: "Визуал",
+  consistency: "Консистентность",
+  differentiation: "Дифференциация",
+  conversion: "Конверсия",
+  tone: "Характер бренда",
+  context: "Бизнес-пульс",
+};
 
 // Воронка: факты → оптика → характер → проверка на прочность.
 // Проверочные пары: audience_clarity↔audience_type, stand_out↔strip_name, offer_ease↔outsider_desc.
@@ -39,6 +49,16 @@ const STAGE_IDENTITY = [
   { id: "party_duo", type: "duo", axis: "tone", q: "Твой бренд на вечеринке — кто он?", left: "Душа компании", right: "Глубокий собеседник" },
   { id: "feel_now_duo", type: "duo", axis: "tone", q: "Каким бренд ощущается сейчас?", left: "Тёплым", right: "Строгим" },
   { id: "feel_want_duo", type: "duo", axis: "tone", q: "А каким хочешь, чтобы ощущался?", left: "Тёплым", right: "Строгим" },
+];
+
+const STAGE_PULSE = [
+  { id: "conv_known", type: "scale", axis: "conversion", q: "Знаешь свою конверсию в цифрах?", sub: "Просмотры → покупки/установки/записи. 0 — без понятия · 5 — слежу постоянно" },
+  { id: "attribution", type: "scale", axis: "conversion", q: "Знаешь, откуда приходят клиенты?", sub: "0 — загадка · 5 — вижу каждый канал в цифрах" },
+  { id: "channel_duo", type: "duo", axis: "context", q: "Клиенты приходят скорее из…", left: "Сарафан и органика", right: "Реклама", skippable: true, skipLabel: "Пока их мало", skipValue: "клиентов пока мало" },
+  { id: "reels_cadence", type: "scale", axis: "context", q: "Сколько коротких видео выходит в неделю?", sub: "Reels, TikTok, Shorts. 0 — не снимаем · 5 — пять и больше" },
+  { id: "youtube", type: "bool", axis: "context", q: "YouTube-канал ведётся?", sub: "Хотя бы изредка, но живой." },
+  { id: "breakeven", type: "duo", axis: "context", q: "Проект уже окупается?", sub: "Это контекст для рекомендаций, не экзамен.", left: "Пока нет", right: "Да", skippable: true, skipLabel: "Сложно сказать", skipValue: "сложно сказать" },
+  { id: "team", type: "duo", axis: "context", q: "Кто всё это делает?", left: "Я один", right: "Команда" },
 ];
 
 const STAGE_DEPTH = [
@@ -68,6 +88,18 @@ const TYPE_SETS = {
     { id: "proof", type: "bool", axis: "conversion", q: "Кейсы или отзывы на сайте есть?" },
     { id: "vs_big", type: "scale", axis: "differentiation", q: "Понятно, чем ты лучше крупных игроков?", sub: "Для клиента, который сравнивает." },
   ],
+  "Магазин / e-com": [
+    { id: "product_cards_style", type: "bool", axis: "consistency", q: "Карточки товаров в одном стиле?", sub: "Фото, фоны, подписи." },
+    { id: "packaging", type: "scale", axis: "differentiation", q: "Товар или упаковку узнают без логотипа?", sub: "0 — как у всех · 5 — узнают по фото" },
+    { id: "shop_reviews", type: "bool", axis: "conversion", q: "Отзывы собираешь и показываешь?" },
+    { id: "ad_landing", type: "bool", axis: "conversion", q: "Реклама ведёт на оформленную страницу?", sub: "А не просто в общий каталог или личку." },
+  ],
+  "Локальный бизнес / услуги": [
+    { id: "maps_profile", type: "bool", axis: "conversion", q: "Профиль в картах оформлен?", sub: "Google Maps, 2ГИС — фото, часы, описание." },
+    { id: "work_photos", type: "scale", axis: "visual", q: "Фото работ в едином стиле?", sub: "0 — что сняли, то сняли · 5 — лента как витрина" },
+    { id: "price_clear", type: "scale", axis: "positioning", q: "Клиент поймёт цены до звонка?", sub: "Без «ответили в директ»." },
+    { id: "easy_booking", type: "bool", axis: "conversion", q: "Записаться можно в пару кликов?" },
+  ],
   "Сервис": [
     { id: "client_page", type: "bool", axis: "conversion", q: "Есть страница, куда ведёшь клиентов?" },
     { id: "offer_price_clear", type: "scale", axis: "positioning", q: "Клиенту понятно, что он получит и за сколько?" },
@@ -91,7 +123,7 @@ export function buildQuestions(building) {
   const typed = TYPE_SETS[building] ?? TYPE_SETS["Другое"];
   const typedFacts = typed.filter((c) => c.type === "bool");
   const typedRest = typed.filter((c) => c.type !== "bool");
-  return [...STAGE_FACTS, ...typedFacts, ...STAGE_OPTICS, ...typedRest, ...STAGE_IDENTITY, ...STAGE_DEPTH];
+  return [...STAGE_FACTS, ...typedFacts, ...STAGE_OPTICS, ...typedRest, ...STAGE_IDENTITY, ...STAGE_PULSE, ...STAGE_DEPTH];
 }
 
 export const LINK_FIELDS = [

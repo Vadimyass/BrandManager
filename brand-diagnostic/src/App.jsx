@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AXES, BUILDING_OPTIONS, buildQuestions, LEVELS, LINK_FIELDS } from "./cards.js";
+import { AXES, AXIS_LABELS, BUILDING_OPTIONS, buildQuestions, LEVELS, LINK_FIELDS } from "./cards.js";
 import { diagnose, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -102,7 +102,7 @@ function Deck({ questions, onDone }) {
             <div className="stamp no" style={{ opacity: drag ? Math.min(Math.max(-drag.dx, 0) / SWIPE_THRESHOLD, 1) : 0 }}>{stampLeft(c)}</div>
           </>
         )}
-        <div className="ax">{AXES.find((a) => a.key === c.axis)?.name ?? "Характер бренда"}</div>
+        <div className="ax">{AXIS_LABELS[c.axis] ?? "Про твой бизнес"}</div>
         <div className="cq">{c.q}</div>
         {c.sub && <div className="csub">{c.sub}</div>}
         {c.type === "scale" && (
@@ -124,7 +124,7 @@ function Deck({ questions, onDone }) {
   if (exiting) {
     stack.push(
       <div key={exiting.card.id} className={"scard fly " + (exiting.dir > 0 ? "r" : "l")} style={{ zIndex: 4 }}>
-        <div className="ax">{AXES.find((a) => a.key === exiting.card.axis)?.name ?? "Характер бренда"}</div>
+        <div className="ax">{AXIS_LABELS[exiting.card.axis] ?? "Про твой бизнес"}</div>
         <div className="cq">{exiting.card.q}</div>
       </div>,
     );
@@ -244,7 +244,7 @@ export default function App() {
           <div className="phase">
             <div className="eyebrow">Диагностика бренда · v2</div>
             <h1>Узнай, на каком уровне твой бренд — за две минуты</h1>
-            <p className="lede">Для инди-разработчиков и фаундеров. Отвечай свайпами — честно. Покажу уровень зрелости по пяти осям и где именно зона роста.</p>
+            <p className="lede">Для тех, кто строит своё — от приложения и игры до магазина и салона. Отвечай свайпами — честно. Покажу уровень зрелости по пяти осям и где именно зона роста.</p>
             <div className="ladder">
               {LEVELS.map((l) => (
                 <div key={l.n} className="rung dim">
