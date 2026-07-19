@@ -2,15 +2,23 @@ import { llmJson, type LlmUsage } from "./llm.ts";
 
 export const LEVEL_NAMES = ["Хаос", "Ремесленник", "Согласованность", "Позиционирование", "Магнит"];
 
+export interface CardAnswer {
+  id: string;
+  axis: string;
+  q: string;
+  answer: "yes" | "no" | "skip";
+}
+
 export interface Answers {
   building: string;
   name?: string;
-  offer: string;
-  audience: string;
-  differentiation: string;
-  selfBrand: string;
-  assets: string[];
-  touchpoints: string[];
+  cards?: CardAnswer[];
+  offer?: string;
+  audience?: string;
+  differentiation?: string;
+  selfBrand?: string;
+  assets?: string[];
+  touchpoints?: string[];
   links?: { store?: string; landing?: string; social?: string };
   clarification?: string;
   selfScores?: Record<string, number>;
@@ -73,7 +81,8 @@ const ASSESSOR_SYSTEM = `Ты — ассессор зрелости бренда
 ${RUBRIC}
 
 Правила:
-- Оценивай строго по вводу пользователя. Будь конкретен к ЕГО продукту: ссылайся на его название, оффер, факты из описания. Генерик недопустим.
+- Оценивай строго по вводу пользователя. Будь конкретен к ЕГО продукту: ссылайся на его название, тип и конкретные ответы. Генерик недопустим.
+- Если ввод — самоотчёт бинарными ответами (да/нет/не знаю): люди склонны себе льстить, оценивай консервативно. «не знаю» трактуй как слабое «нет». Score 4–5 по оси ставь только при уверенных «да» по всем вопросам оси.
 - Если пользователь дал ссылки — учитывай сам факт их наличия как сигнал (есть точки контакта), но не выдумывай их содержимое.
 - Заметки (note) короткие, по делу, на русском.
 - gaps — 2–3 конкретных разрыва именно у этого бренда, отсортированы по влиянию на конверсию.
@@ -94,17 +103,33 @@ ${RUBRIC}
 
 Верни ТОЛЬКО валидный JSON: {"approved": true, "issues": []} либо {"approved": false, "issues": ["конкретная проблема", "..."]}`;
 
+const ANSWER_LABELS: Record<string, string> = { yes: "да", no: "нет", skip: "не знаю" };
+
 // selfScores намеренно не попадают в промпт: самооценка юзера не должна смещать ассессора.
 export function buildUserMessage(a: Answers): string {
-  const lines = [
-    `Тип продукта: ${a.building}${a.name ? ` («${a.name}»)` : ""}`,
-    `Оффер: ${a.offer}`,
-    `Целевая аудитория: ${a.audience}`,
-    `Отличие от альтернатив: ${a.differentiation}`,
-    `Как описывает бренд: ${a.selfBrand}`,
-    `Есть из визуала: ${a.assets?.length ? a.assets.join(", ") : "ничего не отмечено"}`,
-    `Точки контакта: ${a.touchpoints?.length ? a.touchpoints.join(", ") : "не указаны"}`,
-  ];
+  const lines = [`Тип продукта: ${a.building}${a.name ? ` («${a.name}»)` : ""}`];
+
+  if (a.cards?.length) {
+    lines.push("", "Самоотчёт (ответы на бинарные вопросы):");
+    const byAxis = new Map<string, CardAnswer[]>();
+    for (const c of a.cards) {
+      byAxis.set(c.axis, [...(byAxis.get(c.axis) ?? []), c]);
+    }
+    for (const [axis, cards] of byAxis) {
+      lines.push(`[${axis}]`);
+      for (const c of cards) lines.push(`- ${c.q} → ${ANSWER_LABELS[c.answer] ?? c.answer}`);
+    }
+  } else {
+    lines.push(
+      `Оффер: ${a.offer}`,
+      `Целевая аудитория: ${a.audience}`,
+      `Отличие от альтернатив: ${a.differentiation}`,
+      `Как описывает бренд: ${a.selfBrand}`,
+      `Есть из визуала: ${a.assets?.length ? a.assets.join(", ") : "ничего не отмечено"}`,
+      `Точки контакта: ${a.touchpoints?.length ? a.touchpoints.join(", ") : "не указаны"}`,
+    );
+  }
+
   const links = Object.entries(a.links ?? {}).filter(([, v]) => v?.trim());
   if (links.length) lines.push(`Ссылки: ${links.map(([k, v]) => `${k}: ${v}`).join(" · ")}`);
   if (a.clarification?.trim()) lines.push(`Уточнение по запросу: ${a.clarification}`);

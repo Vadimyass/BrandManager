@@ -52,13 +52,17 @@ Deno.serve(async (req) => {
 
 async function diagnose(body: { answers: Answers; skipGate?: boolean }) {
   const { answers, skipGate } = body;
-  if (!answers?.offer || !answers?.selfBrand) throw new Error("answers incomplete");
+  const hasCards = (answers?.cards?.length ?? 0) >= 10;
+  if (!answers?.building || (!hasCards && (!answers?.offer || !answers?.selfBrand))) {
+    throw new Error("answers incomplete");
+  }
 
   const started = Date.now();
   const usage: LlmUsage[] = [];
 
+  // Гейт нужен только свободному тексту: карточные ответы мусорными не бывают.
   let gate = null;
-  if (!skipGate) {
+  if (!skipGate && !hasCards) {
     gate = await runGate(answers, usage);
     if (!gate.sufficient) return { status: "clarify", question: gate.question };
   }
