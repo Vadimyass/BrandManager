@@ -32,7 +32,7 @@ export const CSS = `
 .bd .bar{height:4px;border-radius:2px;background:var(--line);margin-bottom:30px;overflow:hidden}
 .bd .bar .fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--violet),var(--amber));transition:width .35s cubic-bezier(.2,.8,.2,1)}
 .bd .deck{position:relative;height:min(380px,58vh);margin:10px 0 22px;touch-action:pan-y}
-.bd .scard{position:absolute;inset:0;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:24px;padding:clamp(22px,5vw,36px);display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:0 24px 60px rgba(22,23,43,.10);will-change:transform;user-select:none;cursor:grab;transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.bd .scard{position:absolute;inset:0;background:#fff;border:1px solid var(--line);border-radius:24px;padding:clamp(22px,5vw,36px);display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:0 24px 60px rgba(22,23,43,.10);will-change:transform;user-select:none;cursor:grab;transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .3s}
 .bd .scard:active{cursor:grabbing}
 .bd .scard.drag{transition:none}
 .bd .scard.behind1{transform:translateY(14px) scale(.955);opacity:.75;pointer-events:none}
@@ -40,6 +40,12 @@ export const CSS = `
 .bd .scard.fly{transition:transform .42s cubic-bezier(.5,0,.8,.4),opacity .42s ease-out;opacity:0;pointer-events:none}
 .bd .scard.fly.r{transform:translateX(135%) rotate(13deg)}
 .bd .scard.fly.l{transform:translateX(-135%) rotate(-13deg)}
+.bd .optrow{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.bd .opt{padding:13px 16px;border:1px solid var(--line);border-radius:14px;font-family:var(--body);font-size:15px;line-height:1.45;color:var(--ink);background:#fff;cursor:pointer;text-align:left;transition:all .15s cubic-bezier(.2,.8,.2,1)}
+.bd .opt:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,23,43,.1)}
+.bd .opt.l:hover{border-color:var(--no)}
+.bd .opt.r:hover{border-color:var(--amber)}
+.bd .opt .side{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
 .bd .scalerow{display:flex;gap:8px;margin-top:16px}
 .bd .scbtn{flex:1;max-width:58px;aspect-ratio:1;border-radius:14px;font-family:var(--mono);font-size:16px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1)}
 .bd .scbtn:hover{transform:translateY(-3px);border-color:var(--ink)}

@@ -16,6 +16,7 @@ async function post(route, body) {
   return data;
 }
 
-export const diagnose = (answers, skipGate = false, round = 0) => post("diagnose", { answers, skipGate, round });
+export const getDeck = (seedAnswers, name) => post("deck", { seedAnswers, name });
+export const diagnose = (payload) => post("diagnose", payload);
 export const sendFeedback = (id, verdict) => post("feedback", { id, verdict });
 export const joinWaitlist = (email, diagnosticId) => post("waitlist", { email, diagnosticId });

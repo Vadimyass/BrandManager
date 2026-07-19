@@ -1,12 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  type Answers,
-  type Assessment,
-  LEVEL_NAMES,
-  runAssessor,
-  runGate,
-  runProbeGen,
-  runValidator,
+  AXES_KEYS,
+  AXIS_NAMES,
+  type Calibration,
+  type Decision,
+  decisionLog,
+  type Diagnosis,
+  runCalibrator,
+  runDiagnost,
+  runDiagValidator,
+  runGenerator,
+  runMethodist,
+  type SeedAnswer,
 } from "./agents.ts";
 import type { LlmUsage } from "./llm.ts";
 
@@ -36,6 +41,8 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     switch (route) {
+      case "deck":
+        return json(await deck(body));
       case "diagnose":
         return json(await diagnose(body));
       case "feedback":
@@ -51,54 +58,52 @@ Deno.serve(async (req) => {
   }
 });
 
-const MAX_PROBE_ROUNDS = 2;
+async function deck(body: { seedAnswers: SeedAnswer[]; name?: string }) {
+  const { seedAnswers, name } = body;
+  if (!seedAnswers?.length || seedAnswers.length < 2) throw new Error("seed answers incomplete");
 
-async function diagnose(body: { answers: Answers; skipGate?: boolean; round?: number }) {
-  const { answers, skipGate } = body;
-  const round = body.round ?? 0;
-  const hasCards = (answers?.cards?.length ?? 0) >= 10;
-  if (!answers?.building || (!hasCards && (!answers?.offer || !answers?.selfBrand))) {
-    throw new Error("answers incomplete");
-  }
+  const usage: LlmUsage[] = [];
+  const calibration = await runCalibrator(seedAnswers, name, usage);
+  let cards = await runGenerator(calibration, seedAnswers, name, usage);
+  if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, usage);
+  if (cards.length < 5) throw new Error("deck generation failed");
+
+  return { status: "ok", calibration, cards, usage };
+}
+
+interface DiagnosePayload {
+  name?: string;
+  seedAnswers: SeedAnswer[];
+  calibration: Calibration;
+  decisions: Decision[];
+  links?: Record<string, string>;
+  deckUsage?: LlmUsage[];
+}
+
+async function diagnose(body: DiagnosePayload) {
+  if (!body.calibration || (body.decisions?.length ?? 0) < 5) throw new Error("decisions incomplete");
 
   const started = Date.now();
-  const usage: LlmUsage[] = [];
+  const usage: LlmUsage[] = [...(body.deckUsage ?? [])];
+  const log = decisionLog(body);
 
-  // Гейт нужен только свободному тексту: карточные ответы мусорными не бывают.
-  let gate = null;
-  if (!skipGate && !hasCards) {
-    gate = await runGate(answers, usage);
-    if (!gate.sufficient) return { status: "clarify", question: gate.question };
-  }
-
-  let assessment = await runAssessor(answers, usage);
-
-  const unclear = assessment.unclearAxes ?? [];
-  if (round < MAX_PROBE_ROUNDS && unclear.length > 0) {
-    try {
-      const cards = await runProbeGen(answers, unclear, usage);
-      if (cards.length >= 2) return { status: "probe", cards, axes: unclear, round };
-    } catch (e) {
-      console.error("probe generation failed, falling through to final result:", e);
-    }
-  }
-
-  let validation = await runValidator(answers, assessment, usage);
+  let diagnosis = await runDiagnost(log, usage);
+  let validation = await runDiagValidator(log, diagnosis, usage);
   let retried = false;
   if (!validation.approved) {
     retried = true;
-    assessment = await runAssessor(answers, usage, validation.issues);
-    validation = await runValidator(answers, assessment, usage);
+    diagnosis = await runDiagnost(log, usage, validation.issues);
+    validation = await runDiagValidator(log, diagnosis, usage);
   }
+  normalizeDiagnosis(diagnosis);
 
-  enforceWeakestLinkRule(assessment);
+  const sprints = await runMethodist(diagnosis, body.calibration, usage);
 
   const { data, error } = await db
     .from("diagnostics")
     .insert({
-      input: answers,
-      gate,
-      result: assessment,
+      input: { name: body.name, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
+      result: { ...diagnosis, sprints },
       validator: { ...validation, retried },
       usage,
       latency_ms: Date.now() - started,
@@ -107,18 +112,18 @@ async function diagnose(body: { answers: Answers; skipGate?: boolean; round?: nu
     .single();
   if (error) throw error;
 
-  return { status: "ok", id: data.id, result: assessment };
+  return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
 }
 
-// Правило рубрики детерминировано, модели не доверяем арифметику.
-// Среднее двух слабейших: одна пустая ось не топит весь бренд в L1, но слабые звенья решают.
-function enforceWeakestLinkRule(a: Assessment) {
-  const scores = (a.axes ?? []).map((x) => Number(x.score)).filter((n) => n >= 1 && n <= 5);
-  if (scores.length !== 5) throw new Error("assessor returned malformed axes");
-  const [w1, w2] = scores.sort((x, y) => x - y);
-  a.overallLevel = Math.max(1, Math.floor((w1 + w2) / 2));
-  a.levelName = LEVEL_NAMES[a.overallLevel - 1];
-  delete a.unclearAxes;
+function normalizeDiagnosis(d: Diagnosis) {
+  const byKey = new Map((d.axes ?? []).map((a) => [a.key, a]));
+  d.axes = AXES_KEYS.map((key) => {
+    const a = byKey.get(key);
+    const score = Math.min(5, Math.max(1, Math.round(Number(a?.score) || 1)));
+    return { key, name: AXIS_NAMES[key], score };
+  });
+  if (!AXES_KEYS.includes(d.weakness?.axis)) d.weakness.axis = d.axes.reduce((m, a) => (a.score < m.score ? a : m)).key;
+  if (!AXES_KEYS.includes(d.superpower?.axis)) d.superpower.axis = d.axes.reduce((m, a) => (a.score > m.score ? a : m)).key;
 }
 
 async function feedback(body: { id: string; verdict: "accurate" | "miss" }) {
