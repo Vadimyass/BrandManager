@@ -62,6 +62,8 @@ function Deck({ questions, onDone }) {
 
   const onPointerDown = (e) => {
     if (!card || exiting) return;
+    // Клик по кнопке внутри карточки не должен начинать drag: pointer capture украл бы у неё click.
+    if (e.target.closest("button")) return;
     startX.current = e.clientX;
     setDrag({ dx: 0 });
     e.currentTarget.setPointerCapture(e.pointerId);
