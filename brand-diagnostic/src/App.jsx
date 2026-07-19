@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AXES, BUILDING_OPTIONS, CARDS, LEVELS, LINK_FIELDS } from "./cards.js";
+import { AXES, BUILDING_OPTIONS, buildQuestions, LEVELS, LINK_FIELDS } from "./cards.js";
 import { diagnose, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -10,85 +10,135 @@ const EMPTY_ANSWERS = {
   selfScores: {},
 };
 
-const FLY_MS = 380;
+const FLY_MS = 420;
 const SWIPE_THRESHOLD = 90;
 
-function Deck({ onDone }) {
+function Deck({ questions, onDone }) {
   const [idx, setIdx] = useState(0);
-  const [drag, setDrag] = useState({ dx: 0, active: false });
-  const [fly, setFly] = useState(null);
+  const [exiting, setExiting] = useState(null);
+  const [drag, setDrag] = useState(null);
+  const [picked, setPicked] = useState(null);
   const answersRef = useRef([]);
   const startX = useRef(0);
 
-  const card = CARDS[idx];
+  const card = questions[idx];
 
   function commit(answer, dir) {
-    if (fly) return;
-    setFly({ dir });
-    setDrag({ dx: 0, active: false });
-    answersRef.current = [...answersRef.current, { id: card.id, axis: card.axis, q: card.q, answer }];
+    if (!card || exiting) return;
+    answersRef.current.push({ id: card.id, axis: card.axis, q: card.q, answer });
+    setExiting({ card, dir });
+    setDrag(null);
+    setPicked(null);
+    const next = idx + 1;
+    setIdx(next);
     setTimeout(() => {
-      setFly(null);
-      if (idx + 1 >= CARDS.length) onDone(answersRef.current);
-      else setIdx(idx + 1);
+      setExiting(null);
+      if (next >= questions.length) onDone(answersRef.current);
     }, FLY_MS);
   }
 
+  function pickScale(n) {
+    if (picked !== null || exiting) return;
+    setPicked(n);
+    setTimeout(() => commit(`${n}/5`, n >= 3 ? 1 : -1), 300);
+  }
+
+  const swipeable = card && card.type !== "scale";
+
   const onPointerDown = (e) => {
-    if (fly) return;
+    if (!swipeable || exiting) return;
     startX.current = e.clientX;
-    setDrag({ dx: 0, active: true });
+    setDrag({ dx: 0 });
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e) => {
-    if (!drag.active || fly) return;
-    setDrag({ dx: e.clientX - startX.current, active: true });
+    if (drag) setDrag({ dx: e.clientX - startX.current });
   };
   const onPointerUp = () => {
-    if (!drag.active || fly) return;
-    if (drag.dx > SWIPE_THRESHOLD) commit("yes", 1);
-    else if (drag.dx < -SWIPE_THRESHOLD) commit("no", -1);
-    else setDrag({ dx: 0, active: false });
+    if (!drag) return;
+    const { dx } = drag;
+    setDrag(null);
+    if (dx > SWIPE_THRESHOLD) commit(card.type === "duo" ? card.right : "yes", 1);
+    else if (dx < -SWIPE_THRESHOLD) commit(card.type === "duo" ? card.left : "no", -1);
   };
 
-  const transform = fly
-    ? `translateX(${fly.dir * 130}%) rotate(${fly.dir * 14}deg)`
-    : `translateX(${drag.dx}px) rotate(${drag.dx * 0.06}deg)`;
-  const topClass = "scard" + (fly ? " fly" : drag.active ? "" : " snap");
-  const axName = AXES.find((a) => a.key === card.axis)?.name ?? "";
+  const stampRight = (c) => (c.type === "duo" ? c.right : c.right ?? "ДА");
+  const stampLeft = (c) => (c.type === "duo" ? c.left : c.left ?? "НЕТ");
+
+  function renderCardBody(c, isTop) {
+    return (
+      <>
+        {isTop && c.type !== "scale" && (
+          <>
+            <div className="stamp yes" style={{ opacity: drag ? Math.min(Math.max(drag.dx, 0) / SWIPE_THRESHOLD, 1) : 0 }}>{stampRight(c)}</div>
+            <div className="stamp no" style={{ opacity: drag ? Math.min(Math.max(-drag.dx, 0) / SWIPE_THRESHOLD, 1) : 0 }}>{stampLeft(c)}</div>
+          </>
+        )}
+        <div className="ax">{AXES.find((a) => a.key === c.axis)?.name ?? "Характер бренда"}</div>
+        <div className="cq">{c.q}</div>
+        {c.sub && <div className="csub">{c.sub}</div>}
+        {c.type === "scale" && (
+          <div className="scalerow">
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                className={"scbtn" + (picked === n ? " picked" : picked !== null ? " dimmed" : "")}
+                onClick={() => isTop && pickScale(n)}
+              >{n}</button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  const stack = [];
+  if (exiting) {
+    stack.push(
+      <div key={exiting.card.id} className={"scard fly " + (exiting.dir > 0 ? "r" : "l")} style={{ zIndex: 4 }}>
+        <div className="ax">{AXES.find((a) => a.key === exiting.card.axis)?.name ?? "Характер бренда"}</div>
+        <div className="cq">{exiting.card.q}</div>
+      </div>,
+    );
+  }
+  questions.slice(idx, idx + 3).forEach((c, i) => {
+    const isTop = i === 0;
+    stack.push(
+      <div
+        key={c.id}
+        className={"scard" + (isTop ? (drag ? " drag" : "") : ` behind${i}`)}
+        style={isTop ? { transform: drag ? `translateX(${drag.dx}px) rotate(${drag.dx * 0.06}deg)` : "none", zIndex: 3 } : { zIndex: 3 - i }}
+        onPointerDown={isTop ? onPointerDown : undefined}
+        onPointerMove={isTop ? onPointerMove : undefined}
+        onPointerUp={isTop ? onPointerUp : undefined}
+        onPointerCancel={isTop ? onPointerUp : undefined}
+      >
+        {renderCardBody(c, isTop)}
+      </div>,
+    );
+  });
 
   return (
     <div>
-      <div className="bar"><div className="fill" style={{ width: `${(idx / CARDS.length) * 100}%` }} /></div>
-      <div className="qnum">{String(idx + 1).padStart(2, "0")} / {String(CARDS.length).padStart(2, "0")} · свайпай или жми кнопки</div>
-      <div className="deck">
-        {CARDS[idx + 2] && <div className="scard behind2" />}
-        {CARDS[idx + 1] && (
-          <div className="scard behind1">
-            <div className="ax">{AXES.find((a) => a.key === CARDS[idx + 1].axis)?.name}</div>
-            <div className="cq" style={{ opacity: .35 }}>{CARDS[idx + 1].q}</div>
-          </div>
-        )}
-        <div
-          className={topClass}
-          style={{ transform, zIndex: 3 }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <div className="stamp yes" style={{ opacity: fly?.dir === 1 ? 1 : Math.min(Math.max(drag.dx, 0) / SWIPE_THRESHOLD, 1) }}>{card.right ?? "ДА"}</div>
-          <div className="stamp no" style={{ opacity: fly?.dir === -1 ? 1 : Math.min(Math.max(-drag.dx, 0) / SWIPE_THRESHOLD, 1) }}>{card.left ?? "НЕТ"}</div>
-          <div className="ax">{axName}</div>
-          <div className="cq">{card.q}</div>
-          {card.sub && <div className="csub">{card.sub}</div>}
+      <div className="bar"><div className="fill" style={{ width: `${(idx / questions.length) * 100}%` }} /></div>
+      <div className="qnum">
+        {String(Math.min(idx + 1, questions.length)).padStart(2, "0")} / {String(questions.length).padStart(2, "0")}
+        {card?.type === "scale" ? " · выбери на шкале" : " · свайпай или жми кнопки"}
+      </div>
+      <div className="deck">{stack}</div>
+      {card && card.type === "bool" && (
+        <div className="deckbtns">
+          <button className="dbtn no" onClick={() => commit("no", -1)}>{card.left ?? "Нет"}</button>
+          <button className="dbtn skip" onClick={() => commit("skip", -1)}>Не знаю</button>
+          <button className="dbtn yes" onClick={() => commit("yes", 1)}>{card.right ?? "Да"}</button>
         </div>
-      </div>
-      <div className="deckbtns">
-        <button className="dbtn no" onClick={() => commit("no", -1)}>{card.left ?? "Нет"}</button>
-        <button className="dbtn skip" onClick={() => commit("skip", -1)}>Не знаю</button>
-        <button className="dbtn yes" onClick={() => commit("yes", 1)}>{card.right ?? "Да"}</button>
-      </div>
+      )}
+      {card && card.type === "duo" && (
+        <div className="deckbtns">
+          <button className="dbtn no" onClick={() => commit(card.left, -1)}>{card.left}</button>
+          <button className="dbtn yes" onClick={() => commit(card.right, 1)}>{card.right}</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -96,6 +146,7 @@ function Deck({ onDone }) {
 export default function App() {
   const [phase, setPhase] = useState("intro");
   const [answers, setAnswers] = useState(EMPTY_ANSWERS);
+  const [questions, setQuestions] = useState([]);
   const [result, setResult] = useState(null);
   const [diagnosticId, setDiagnosticId] = useState(null);
   const [error, setError] = useState("");
@@ -122,7 +173,7 @@ export default function App() {
   }
 
   const reset = () => {
-    setPhase("intro"); setAnswers(EMPTY_ANSWERS); setResult(null);
+    setPhase("intro"); setAnswers(EMPTY_ANSWERS); setQuestions([]); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail("");
   };
 
@@ -153,7 +204,7 @@ export default function App() {
           <div className="phase">
             <div className="eyebrow">Диагностика бренда · v2</div>
             <h1>Узнай, на каком уровне твой бренд — за две минуты</h1>
-            <p className="lede">Для инди-разработчиков и фаундеров. Отвечай свайпами — честно. Покажу уровень зрелости по пяти осям и где именно разрыв.</p>
+            <p className="lede">Для инди-разработчиков и фаундеров. Отвечай свайпами — честно. Покажу уровень зрелости по пяти осям и где именно зона роста.</p>
             <div className="ladder">
               {LEVELS.map((l) => (
                 <div key={l.n} className="rung dim">
@@ -170,6 +221,7 @@ export default function App() {
           <div className="phase">
             <div className="qnum">Перед стартом</div>
             <div className="q">Что ты строишь?</div>
+            <div className="hint">От этого зависит, какие вопросы ты увидишь.</div>
             <div className="row" style={{ marginTop: 10 }}>
               {BUILDING_OPTIONS.map((o) => (
                 <button key={o} className={"chip" + (answers.building === o ? " on" : "")} onClick={() => set("building", o)}>{o}</button>
@@ -180,14 +232,14 @@ export default function App() {
             </div>
             <div className="nav">
               <button className="btn ghost" onClick={() => setPhase("intro")}>Назад</button>
-              <button className="btn" disabled={!answers.building} onClick={() => setPhase("cards")}>Поехали</button>
+              <button className="btn" disabled={!answers.building} onClick={() => { setQuestions(buildQuestions(answers.building)); setPhase("cards"); }}>Поехали</button>
             </div>
           </div>
         )}
 
-        {phase === "cards" && (
+        {phase === "cards" && questions.length > 0 && (
           <div className="phase">
-            <Deck onDone={(cards) => { set("cards", cards); setPhase("links"); }} />
+            <Deck questions={questions} onDone={(cards) => { set("cards", cards); setPhase("links"); }} />
           </div>
         )}
 
@@ -294,7 +346,7 @@ export default function App() {
 
               {result.gaps?.length > 0 && (
                 <div className="block">
-                  <h3>Где разрыв</h3>
+                  <h3>Зоны роста</h3>
                   {result.gaps.map((g, i) => (
                     <div className="gap" key={i}><span className="mk">→</span><span>{g}</span></div>
                   ))}
@@ -324,10 +376,10 @@ export default function App() {
             <div className="share">
               <span className="pill">L{result.overallLevel} · {result.levelName}</span>
               {joined ? (
-                <span className="pill" style={{ color: "var(--violet)", borderColor: "var(--violet)" }}>Ты в списке — напишем, когда откроем полный разбор</span>
+                <span className="pill" style={{ color: "var(--violet)", borderColor: "var(--violet)" }}>Ты в списке — напишем, когда откроем персональный план роста</span>
               ) : (
                 <>
-                  <input className="field" style={{ maxWidth: 240 }} placeholder="email для полного разбора" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <input className="field" style={{ maxWidth: 240 }} placeholder="email для персонального плана" value={email} onChange={(e) => setEmail(e.target.value)} />
                   <button className="btn" disabled={!email.includes("@")} onClick={join}>В список</button>
                 </>
               )}

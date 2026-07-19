@@ -32,12 +32,19 @@ export const CSS = `
 .bd .bar{height:4px;border-radius:2px;background:var(--line);margin-bottom:30px;overflow:hidden}
 .bd .bar .fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--violet),var(--amber));transition:width .35s cubic-bezier(.2,.8,.2,1)}
 .bd .deck{position:relative;height:min(380px,58vh);margin:10px 0 22px;touch-action:pan-y}
-.bd .scard{position:absolute;inset:0;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:24px;padding:clamp(22px,5vw,36px);display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:0 24px 60px rgba(22,23,43,.10);will-change:transform;user-select:none;cursor:grab}
+.bd .scard{position:absolute;inset:0;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:24px;padding:clamp(22px,5vw,36px);display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:0 24px 60px rgba(22,23,43,.10);will-change:transform;user-select:none;cursor:grab;transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .3s}
 .bd .scard:active{cursor:grabbing}
+.bd .scard.drag{transition:none}
 .bd .scard.behind1{transform:translateY(14px) scale(.955);opacity:.75;pointer-events:none}
 .bd .scard.behind2{transform:translateY(26px) scale(.915);opacity:.4;pointer-events:none}
-.bd .scard.snap{transition:transform .3s cubic-bezier(.2,.8,.2,1)}
-.bd .scard.fly{transition:transform .38s cubic-bezier(.5,0,.8,.4),opacity .38s ease-out;opacity:0}
+.bd .scard.fly{transition:transform .42s cubic-bezier(.5,0,.8,.4),opacity .42s ease-out;opacity:0;pointer-events:none}
+.bd .scard.fly.r{transform:translateX(135%) rotate(13deg)}
+.bd .scard.fly.l{transform:translateX(-135%) rotate(-13deg)}
+.bd .scalerow{display:flex;gap:8px;margin-top:16px}
+.bd .scbtn{flex:1;max-width:58px;aspect-ratio:1;border-radius:14px;font-family:var(--mono);font-size:16px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1)}
+.bd .scbtn:hover{transform:translateY(-3px);border-color:var(--ink)}
+.bd .scbtn.picked{background:var(--amber);border-color:var(--amber);color:#3a2607;transform:scale(1.2)}
+.bd .scbtn.dimmed{opacity:.3;transform:scale(.9)}
 .bd .scard .ax{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
 .bd .scard .cq{font-family:var(--disp);font-weight:600;font-size:clamp(22px,4.6vw,30px);line-height:1.15;letter-spacing:-.015em}
 .bd .scard .csub{font-size:15px;line-height:1.55;color:var(--muted)}
