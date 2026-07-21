@@ -111,6 +111,26 @@ export const CSS = `
 .bd .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:bdspin 1s linear infinite}
 @keyframes bdspin{to{transform:rotate(360deg)}}
 .bd .center{display:flex;flex-direction:column;align-items:center;gap:18px;padding:60px 0;text-align:center}
+.bd .teaser{margin-top:34px;padding:clamp(22px,4vw,34px);background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:24px;box-shadow:0 20px 50px rgba(22,23,43,.07);animation:fadeUp .5s .2s both}
+.bd .tstat{font-family:var(--disp);font-weight:700;font-size:clamp(34px,7vw,54px);letter-spacing:-.03em;line-height:1;margin:14px 0 8px;background:linear-gradient(92deg,var(--ink),var(--violet));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.bd .tstatnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:46ch}
+.bd .tbody{font-size:16.5px;line-height:1.65;margin:0 0 14px;max-width:58ch}
+.bd .tturn{font-size:16.5px;line-height:1.65;margin:0;padding-left:16px;border-left:2px solid var(--amber);max-width:58ch}
+.bd .tq{font-family:var(--disp);font-weight:600;font-size:clamp(19px,3.4vw,24px);letter-spacing:-.01em;margin:22px 0 8px}
+.bd .tlesson{font-size:15px;color:var(--muted);line-height:1.55;max-width:52ch}
+.bd .gets{margin:26px 0 6px}
+.bd .get{display:flex;gap:16px;padding:15px 0;border-bottom:1px solid var(--line);animation:fadeUp .4s both}
+.bd .get:nth-child(1){animation-delay:.05s}.bd .get:nth-child(2){animation-delay:.1s}.bd .get:nth-child(3){animation-delay:.15s}.bd .get:nth-child(4){animation-delay:.2s}.bd .get:nth-child(5){animation-delay:.25s}
+.bd .gnum{font-family:var(--mono);font-size:12px;color:var(--violet);padding-top:3px;letter-spacing:.08em}
+.bd .gtitle{font-family:var(--disp);font-weight:500;font-size:16.5px;letter-spacing:-.01em}
+.bd .gnote{font-size:14.5px;color:var(--muted);line-height:1.5;margin-top:4px;max-width:52ch}
+.bd .planbox{margin-top:26px;padding:20px 22px;background:var(--ink);color:var(--bone);border-radius:20px}
+.bd .planrow{display:flex;gap:14px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line-d);font-size:15.5px;line-height:1.5}
+.bd .planrow:last-child{border-bottom:none}
+.bd .planrow .pnum{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.bd .pricecard{margin-top:26px;padding:22px 24px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.bd .price{font-family:var(--disp);font-weight:700;font-size:38px;letter-spacing:-.03em;line-height:1}
+.bd .pricenote{font-size:13.5px;color:var(--muted);margin-top:6px;max-width:34ch}
 .bd .quote{max-width:46ch;animation:fadeUp .7s cubic-bezier(.2,.8,.2,1) both}
 .bd .qtext{font-family:var(--disp);font-weight:500;font-size:21px;line-height:1.45;letter-spacing:-.01em}
 .bd .qauthor{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:.06em}

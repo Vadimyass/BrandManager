@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
+import { COURSE_PRICE, STORY_HOOKS, WHAT_YOU_GET } from "./offer.js";
 import { diagnose, getDeck, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -237,6 +238,7 @@ export default function App() {
 
   const weakLabel = result ? (AXIS_LABELS[result.weakness?.axis] ?? "") : "";
   const superLabel = result ? (AXIS_LABELS[result.superpower?.axis] ?? "") : "";
+  const hook = result ? STORY_HOOKS[result.weakness?.axis] : null;
 
   return (
     <div className="bd">
@@ -402,10 +404,98 @@ export default function App() {
                 </>
               )}
             </div>
+
+            {hook && (
+              <div className="teaser">
+                <div className="eyebrow" style={{ color: "var(--violet)" }}>Первый урок из курса · открыт бесплатно</div>
+                <div className="tstat">{hook.stat}</div>
+                <div className="tstatnote">{hook.statNote}</div>
+                <p className="tbody">{hook.body}</p>
+                <p className="tturn">{hook.turn}</p>
+                <div className="tq">{hook.question}</div>
+                <div className="tlesson">{hook.lesson}</div>
+                <button className="btn amber" style={{ marginTop: 20 }} onClick={() => setPhase("offer")}>
+                  Дальше: {hook.course}
+                </button>
+              </div>
+            )}
+
             <div className="nav">
               <button className="btn ghost" onClick={reset}>Пройти заново</button>
             </div>
             <div className="foot">Бета · колода и диагноз сгенерированы под твою нишу</div>
+          </div>
+        )}
+
+        {phase === "offer" && result && hook && (
+          <div className="phase">
+            <div className="eyebrow">Курс под твою слепую зону</div>
+            <h1 style={{ fontSize: "clamp(26px,5vw,38px)" }}>{hook.course}</h1>
+            <p className="lede">
+              Ты только что прочитал начало первого урока. Дальше — ещё четыре, собранные под {weakLabel.toLowerCase()} и твою нишу
+              {calibration ? ` (${calibration.industry.toLowerCase()})` : ""}.
+            </p>
+
+            <div className="gets">
+              {WHAT_YOU_GET.map((g) => (
+                <div className="get" key={g.icon}>
+                  <span className="gnum">{g.icon}</span>
+                  <div>
+                    <div className="gtitle">{g.title}</div>
+                    <div className="gnote">{g.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {result.sprints?.length > 0 && (
+              <div className="planbox">
+                <div className="eyebrow" style={{ color: "var(--violet)" }}>Что ты сделаешь за месяц</div>
+                {result.sprints.map((s, i) => (
+                  <div className="planrow" key={i}>
+                    <span className="pnum">{i + 1}</span>
+                    <span>{s.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pricecard">
+              <div>
+                <div className="price">{COURSE_PRICE}</div>
+                <div className="pricenote">разово, доступ навсегда · дешевле одного часа дизайнера</div>
+              </div>
+              <button className="btn amber" onClick={() => setPhase("checkout")}>Забрать курс</button>
+            </div>
+
+            <div className="nav">
+              <button className="btn ghost" onClick={() => setPhase("result")}>Вернуться к диагнозу</button>
+            </div>
+          </div>
+        )}
+
+        {phase === "checkout" && (
+          <div className="phase">
+            <div className="eyebrow">Почти готово</div>
+            <h1 style={{ fontSize: "clamp(24px,4.5vw,32px)" }}>Курс ещё собирается</h1>
+            <p className="lede">
+              Честно: оплату пока не подключили — курс в работе. Оставь почту, и ты получишь его первым и бесплатно,
+              как один из тех, кто тестировал диагностику на раннем этапе.
+            </p>
+            {joined ? (
+              <div className="planbox" style={{ marginTop: 22 }}>
+                <div className="eyebrow" style={{ color: "var(--violet)" }}>Готово</div>
+                <div style={{ fontFamily: "var(--disp)", fontSize: 20, marginTop: 6 }}>Ты в списке. Напишем, как только откроем.</div>
+              </div>
+            ) : (
+              <div className="share" style={{ marginTop: 22 }}>
+                <input className="field" style={{ maxWidth: 260 }} placeholder="твой email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <button className="btn amber" disabled={!email.includes("@")} onClick={join}>Забронировать</button>
+              </div>
+            )}
+            <div className="nav">
+              <button className="btn ghost" onClick={() => setPhase("offer")}>Назад</button>
+            </div>
           </div>
         )}
 
