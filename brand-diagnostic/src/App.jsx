@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
-import { COURSE_PRICE, STORY_HOOKS, WHAT_YOU_GET } from "./offer.js";
+import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { diagnose, getDeck, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -238,7 +238,7 @@ export default function App() {
 
   const weakLabel = result ? (AXIS_LABELS[result.weakness?.axis] ?? "") : "";
   const superLabel = result ? (AXIS_LABELS[result.superpower?.axis] ?? "") : "";
-  const hook = result ? STORY_HOOKS[result.weakness?.axis] : null;
+  const hook = result ? pickHook(niche, result.weakness?.axis) : null;
 
   return (
     <div className="bd">
