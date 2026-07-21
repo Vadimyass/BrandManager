@@ -19,4 +19,4 @@ async function post(route, body) {
 export const getDeck = (seedAnswers, name, niche) => post("deck", { seedAnswers, name, niche });
 export const diagnose = (payload) => post("diagnose", payload);
 export const sendFeedback = (id, verdict) => post("feedback", { id, verdict });
-export const joinWaitlist = (email, diagnosticId) => post("waitlist", { email, diagnosticId });
+export const joinWaitlist = (email, diagnosticId, intent) => post("waitlist", { email, diagnosticId, intent });

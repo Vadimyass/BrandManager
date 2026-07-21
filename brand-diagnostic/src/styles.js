@@ -43,7 +43,7 @@ export const CSS = `
 .bd .optrow{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .bd .opt{padding:13px 16px;border:1px solid var(--line);border-radius:14px;font-family:var(--body);font-size:15px;line-height:1.45;color:var(--ink);background:#fff;cursor:pointer;text-align:left;transition:all .15s cubic-bezier(.2,.8,.2,1)}
 .bd .opt:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,23,43,.1)}
-.bd .opt.l:hover{border-color:var(--no)}
+.bd .opt.l:hover{border-color:var(--violet)}
 .bd .opt.r:hover{border-color:var(--amber)}
 .bd .opt .side{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
 .bd .scalerow{display:flex;gap:8px;margin-top:16px}
@@ -56,13 +56,16 @@ export const CSS = `
 .bd .scard .csub{font-size:15px;line-height:1.55;color:var(--muted)}
 .bd .stamp{position:absolute;top:22px;font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.06em;padding:6px 16px;border-radius:12px;border:3px solid;transform:rotate(-8deg);pointer-events:none}
 .bd .stamp.yes{right:22px;color:var(--amber);border-color:var(--amber);transform:rotate(8deg)}
-.bd .stamp.no{left:22px;color:var(--no);border-color:var(--no)}
+.bd .stamp.no{left:22px;color:var(--violet);border-color:var(--violet)}
 .bd .deckbtns{display:flex;justify-content:center;align-items:center;gap:14px}
 .bd .dbtn{font-family:var(--disp);font-weight:600;font-size:16px;padding:14px 28px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.9);cursor:pointer;transition:all .15s cubic-bezier(.2,.8,.2,1)}
 .bd .dbtn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,23,43,.12)}
 .bd .dbtn:active{transform:scale(.95)}
-.bd .dbtn.no{color:var(--no);border-color:rgba(192,72,60,.4)}
-.bd .dbtn.yes{color:#3a2607;background:var(--amber);border-color:var(--amber)}
+.bd .dbtn.no{color:var(--ink);border-color:var(--line)}
+.bd .dbtn.no:hover{border-color:var(--violet)}
+.bd .dbtn.yes{color:var(--ink);border-color:var(--line)}
+.bd .dbtn.yes:hover{border-color:var(--amber)}
+.bd .dbtn.bool.yes{color:#3a2607;background:var(--amber);border-color:var(--amber)}
 .bd .dbtn.skip{font-size:13px;color:var(--muted);padding:10px 18px}
 .bd .ladder{display:flex;flex-direction:column-reverse;gap:8px;margin:22px 0}
 .bd .rung{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.8);transition:all .3s}
@@ -128,6 +131,13 @@ export const CSS = `
 .bd .planrow{display:flex;gap:14px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line-d);font-size:15.5px;line-height:1.5}
 .bd .planrow:last-child{border-bottom:none}
 .bd .planrow .pnum{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.bd .paths{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:24px}
+.bd .path{padding:22px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.9);transition:all .2s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;gap:8px}
+.bd .path:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(22,23,43,.1)}
+.bd .path.on{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,161,58,.18)}
+.bd .ptag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--violet)}
+.bd .pprice{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1}
+.bd .pnote{font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:8px;flex:1}
 .bd .pricecard{margin-top:26px;padding:22px 24px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .bd .price{font-family:var(--disp);font-weight:700;font-size:38px;letter-spacing:-.03em;line-height:1}
 .bd .pricenote{font-size:13.5px;color:var(--muted);margin-top:6px;max-width:34ch}

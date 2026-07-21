@@ -163,6 +163,7 @@ export default function App() {
   const [feedbackSent, setFeedbackSent] = useState(null);
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
+  const [intent, setIntent] = useState(null);
   const lastAction = useRef(null);
 
   async function guard(fn) {
@@ -219,7 +220,7 @@ export default function App() {
   const reset = () => {
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
-    setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]);
+    setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
 
   async function giveFeedback(verdict) {
@@ -227,9 +228,9 @@ export default function App() {
     try { await sendFeedback(diagnosticId, verdict); } catch { /* не блокируем UI */ }
   }
 
-  async function join() {
+  async function join(intent = "plan") {
     try {
-      await joinWaitlist(email, diagnosticId);
+      await joinWaitlist(email, diagnosticId, intent);
       setJoined(true);
     } catch (e) {
       setError(String(e?.message ?? e));
@@ -476,23 +477,55 @@ export default function App() {
 
         {phase === "checkout" && (
           <div className="phase">
-            <div className="eyebrow">Почти готово</div>
-            <h1 style={{ fontSize: "clamp(24px,4.5vw,32px)" }}>Курс ещё собирается</h1>
-            <p className="lede">
-              Честно: оплату пока не подключили — курс в работе. Оставь почту, и ты получишь его первым и бесплатно,
-              как один из тех, кто тестировал диагностику на раннем этапе.
-            </p>
+            <div className="eyebrow">Последний шаг</div>
+            <h1 style={{ fontSize: "clamp(24px,4.5vw,32px)" }}>Как забрать курс</h1>
+            <p className="lede">Два способа — выбирай любой.</p>
+
             {joined ? (
-              <div className="planbox" style={{ marginTop: 22 }}>
+              <div className="planbox" style={{ marginTop: 24 }}>
                 <div className="eyebrow" style={{ color: "var(--violet)" }}>Готово</div>
-                <div style={{ fontFamily: "var(--disp)", fontSize: 20, marginTop: 6 }}>Ты в списке. Напишем, как только откроем.</div>
+                <div style={{ fontFamily: "var(--disp)", fontSize: 20, marginTop: 6 }}>
+                  {intent === "purchase"
+                    ? "Записал: ты готов купить. Пришлём ссылку на оплату, как только откроем — по цене беты."
+                    : "Ты в списке. Напишем, как только откроем."}
+                </div>
               </div>
             ) : (
-              <div className="share" style={{ marginTop: 22 }}>
-                <input className="field" style={{ maxWidth: 260 }} placeholder="твой email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                <button className="btn amber" disabled={!email.includes("@")} onClick={join}>Забронировать</button>
+              <div className="paths">
+                <div className={"path" + (intent === "purchase" ? " on" : "")}>
+                  <div className="ptag">Купить сейчас</div>
+                  <div className="pprice">{COURSE_PRICE}</div>
+                  <div className="pnote">Доступ навсегда, все пять уроков и личный план.</div>
+                  <button className="btn amber" style={{ width: "100%" }} onClick={() => setIntent("purchase")}>Оплатить</button>
+                </div>
+                <div className={"path" + (intent === "plan" ? " on" : "")}>
+                  <div className="ptag">Пока подождать</div>
+                  <div className="pprice">Бесплатно</div>
+                  <div className="pnote">Оставь почту — получишь курс первым на бете, без оплаты.</div>
+                  <button className="btn ghost" style={{ width: "100%" }} onClick={() => setIntent("plan")}>Оставить почту</button>
+                </div>
               </div>
             )}
+
+            {!joined && intent && (
+              <div className="planbox" style={{ marginTop: 22 }}>
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>
+                  {intent === "purchase" ? "Оплата подключается" : "Почти всё"}
+                </div>
+                <div style={{ fontSize: 15.5, lineHeight: 1.6, margin: "8px 0 16px", opacity: .9 }}>
+                  {intent === "purchase"
+                    ? "Приём платежей ещё не запущен — курс в финальной сборке. Оставь почту: пришлём ссылку на оплату первым и по цене беты."
+                    : "Оставь почту — напишем, как только курс откроется."}
+                </div>
+                <div className="share" style={{ marginTop: 0 }}>
+                  <input className="field" style={{ maxWidth: 260 }} placeholder="твой email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <button className="btn amber" disabled={!email.includes("@")} onClick={() => join(intent)}>
+                    {intent === "purchase" ? "Забронировать место" : "Готово"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="nav">
               <button className="btn ghost" onClick={() => setPhase("offer")}>Назад</button>
             </div>

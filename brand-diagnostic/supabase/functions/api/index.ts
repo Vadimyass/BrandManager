@@ -137,12 +137,13 @@ async function feedback(body: { id: string; verdict: "accurate" | "miss" }) {
   return { status: "ok" };
 }
 
-async function waitlist(body: { email: string; diagnosticId?: string }) {
+async function waitlist(body: { email: string; diagnosticId?: string; intent?: string }) {
   const email = body.email?.trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("invalid email");
+  const intent = body.intent === "purchase" ? "purchase" : "plan";
   const { error } = await db
     .from("waitlist")
-    .upsert({ email, diagnostic_id: body.diagnosticId ?? null }, { onConflict: "email" });
+    .upsert({ email, diagnostic_id: body.diagnosticId ?? null, intent }, { onConflict: "email" });
   if (error) throw error;
   return { status: "ok" };
 }
