@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
+import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
 import { diagnose, getDeck, getLesson, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -32,12 +33,22 @@ const BUILD_STEPS = [
   "Готовлю проверку",
 ];
 
+const STEP_MS = 1800;
+
+// Прогресс считается по реальному времени, а не по тикам: в фоновой вкладке браузер душит таймеры.
 function BuildProgress() {
-  const [step, setStep] = useState(0);
+  const startedAt = useRef(Date.now());
+  const [, force] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, BUILD_STEPS.length - 1)), 1800);
-    return () => clearInterval(t);
+    const t = setInterval(() => force((n) => n + 1), 400);
+    const onShow = () => force((n) => n + 1);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, []);
+  const step = Math.min(Math.floor((Date.now() - startedAt.current) / STEP_MS), BUILD_STEPS.length - 1);
   return (
     <div className="buildlist">
       {BUILD_STEPS.map((s, i) => (
@@ -212,25 +223,30 @@ function Deck({ questions, onDone }) {
 }
 
 export default function App() {
-  const [phase, setPhase] = useState("intro");
-  const [name, setName] = useState("");
-  const [niche, setNiche] = useState("");
-  const [seedAnswers, setSeedAnswers] = useState([]);
-  const [calibration, setCalibration] = useState(null);
-  const [tradeoffs, setTradeoffs] = useState([]);
-  const [deckUsage, setDeckUsage] = useState([]);
-  const [decisions, setDecisions] = useState([]);
-  const [links, setLinks] = useState({ store: "", landing: "", social: "" });
-  const [result, setResult] = useState(null);
-  const [diagnosticId, setDiagnosticId] = useState(null);
+  const saved = useRef(loadSession()).current;
+  const s = saved ?? {};
+
+  const [phase, setPhase] = useState(s.phase ?? "intro");
+  const [name, setName] = useState(s.name ?? "");
+  const [niche, setNiche] = useState(s.niche ?? "");
+  const [seedAnswers, setSeedAnswers] = useState(s.seedAnswers ?? []);
+  const [calibration, setCalibration] = useState(s.calibration ?? null);
+  const [tradeoffs, setTradeoffs] = useState(s.tradeoffs ?? []);
+  const [deckUsage, setDeckUsage] = useState(s.deckUsage ?? []);
+  const [decisions, setDecisions] = useState(s.decisions ?? []);
+  const [links, setLinks] = useState(s.links ?? { store: "", landing: "", social: "" });
+  const [result, setResult] = useState(s.result ?? null);
+  const [diagnosticId, setDiagnosticId] = useState(s.diagnosticId ?? null);
   const [error, setError] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(null);
-  const [email, setEmail] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [intent, setIntent] = useState(null);
-  const [lesson, setLesson] = useState(null);
-  const [lessonStage, setLessonStage] = useState("read");
+  const [feedbackSent, setFeedbackSent] = useState(s.feedbackSent ?? null);
+  const [email, setEmail] = useState(s.email ?? "");
+  const [joined, setJoined] = useState(s.joined ?? false);
+  const [intent, setIntent] = useState(s.intent ?? null);
+  const [lesson, setLesson] = useState(s.lesson ?? null);
+  const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
+  const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
   const lastAction = useRef(null);
+  const resumed = useRef(false);
 
   async function guard(fn) {
     lastAction.current = fn;
@@ -284,6 +300,7 @@ export default function App() {
   }
 
   function openLesson(index) {
+    setLessonIndex(index);
     guard(async () => {
       setPhase("building");
       const res = await getLesson(index, calibration, niche, result);
@@ -293,9 +310,41 @@ export default function App() {
     });
   }
 
+  // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
+  useEffect(() => {
+    if (phase === "intro") return;
+    saveSession({
+      phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
+      result, diagnosticId, feedbackSent, email, joined, intent, lesson, lessonStage, lessonIndex,
+    });
+  }, [phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
+    result, diagnosticId, feedbackSent, email, joined, intent, lesson, lessonStage, lessonIndex]);
+
+  // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
+  useEffect(() => {
+    if (resumed.current) return;
+    resumed.current = true;
+    if (!saved || !PENDING_PHASES.includes(saved.phase)) return;
+
+    if (saved.phase === "prep" && saved.seedAnswers?.length) {
+      guard(async () => {
+        const data = await getDeck(saved.seedAnswers, saved.name, saved.niche);
+        setCalibration(data.calibration);
+        setDeckUsage(data.usage ?? []);
+        setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
+        setPhase("tradeoffs");
+      });
+    } else if (saved.phase === "analyzing" && saved.decisions?.length) {
+      assess(saved.links, saved.decisions);
+    } else if (saved.phase === "building" && saved.result) {
+      openLesson(saved.lessonIndex ?? 0);
+    }
+  }, []);
+
   const reset = () => {
+    clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
-    setLesson(null); setLessonStage("read");
+    setLesson(null); setLessonStage("read"); setLessonIndex(0);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
