@@ -20,3 +20,4 @@ export const getDeck = (seedAnswers, name, niche) => post("deck", { seedAnswers,
 export const diagnose = (payload) => post("diagnose", payload);
 export const sendFeedback = (id, verdict) => post("feedback", { id, verdict });
 export const joinWaitlist = (email, diagnosticId, intent) => post("waitlist", { email, diagnosticId, intent });
+export const getLesson = (index, calibration, niche, diagnosis) => post("lesson", { index, calibration, niche, diagnosis });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
-import { diagnose, getDeck, joinWaitlist, sendFeedback } from "./api.js";
+import { diagnose, getDeck, getLesson, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
 const FLY_MS = 420;
@@ -22,6 +22,70 @@ const QUOTES = [
 
 function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+const BUILD_STEPS = [
+  "Разбираю твои решения",
+  "Смотрю, что ты выбираешь чаще всего",
+  "Подбираю истории под твою нишу",
+  "Собираю задания на твоём продукте",
+  "Готовлю проверку",
+];
+
+function BuildProgress() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStep((s) => Math.min(s + 1, BUILD_STEPS.length - 1)), 1800);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="buildlist">
+      {BUILD_STEPS.map((s, i) => (
+        <div key={s} className={"bstep" + (i < step ? " done" : i === step ? " now" : "")}>
+          <span className="bmark">{i < step ? "✓" : i === step ? "•" : ""}</span>
+          <span>{s}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Quiz({ items, onDone }) {
+  const [i, setI] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const item = items[i];
+  if (!item) return null;
+
+  const isRight = picked && picked === item.correct;
+  const next = () => {
+    setPicked(null);
+    if (i + 1 >= items.length) onDone();
+    else setI(i + 1);
+  };
+
+  return (
+    <div className="quizbox">
+      <div className="eyebrow" style={{ color: "var(--violet)" }}>Проверь себя · {i + 1} из {items.length}</div>
+      <div className="quizq">{item.q}</div>
+      <div className="optrow" style={{ marginTop: 14 }}>
+        <button className={"opt l" + (picked ? (item.correct === "left" ? " good" : " meh") : "")} disabled={!!picked} onClick={() => setPicked("left")}>
+          {item.left}
+        </button>
+        <button className={"opt r" + (picked ? (item.correct === "right" ? " good" : " meh") : "")} disabled={!!picked} onClick={() => setPicked("right")}>
+          {item.right}
+        </button>
+      </div>
+      {picked && (
+        <div className="quizfb">
+          <div className="qverdict">{isRight ? "Верно" : "Смотри глубже"}</div>
+          <div className="qexplain">{item.explain}</div>
+          <button className="btn" style={{ marginTop: 14 }} onClick={next}>
+            {i + 1 >= items.length ? "Закончить урок" : "Следующий вопрос"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Quotes() {
@@ -164,6 +228,8 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [intent, setIntent] = useState(null);
+  const [lesson, setLesson] = useState(null);
+  const [lessonStage, setLessonStage] = useState("read");
   const lastAction = useRef(null);
 
   async function guard(fn) {
@@ -217,8 +283,19 @@ export default function App() {
     });
   }
 
+  function openLesson(index) {
+    guard(async () => {
+      setPhase("building");
+      const res = await getLesson(index, calibration, niche, result);
+      setLesson(res.lesson);
+      setLessonStage("read");
+      setPhase("lesson");
+    });
+  }
+
   const reset = () => {
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
+    setLesson(null); setLessonStage("read");
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -526,9 +603,86 @@ export default function App() {
               </div>
             )}
 
+            {joined && (
+              <div style={{ marginTop: 20 }}>
+                <button className="btn amber" onClick={() => openLesson(0)}>Открыть первый урок</button>
+                <div className="hint" style={{ marginTop: 10 }}>Доступ на время беты открыт — курс собирается под тебя прямо сейчас.</div>
+              </div>
+            )}
+
             <div className="nav">
               <button className="btn ghost" onClick={() => setPhase("offer")}>Назад</button>
             </div>
+          </div>
+        )}
+
+        {phase === "building" && (
+          <div className="center phase">
+            <div className="spin" />
+            <div className="eyebrow" style={{ color: "var(--violet)" }}>Собираю курс под тебя</div>
+            <BuildProgress />
+          </div>
+        )}
+
+        {phase === "lesson" && lesson && (
+          <div className="phase">
+            <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / lesson.total) * 100}%` }} /></div>
+            <div className="qnum">Урок {lesson.index + 1} из {lesson.total}</div>
+            <h1 style={{ fontSize: "clamp(24px,4.6vw,34px)", margin: "10px 0 20px" }}>{lesson.title}</h1>
+
+            {lessonStage === "read" && (
+              <div>
+                {lesson.stat && (
+                  <>
+                    <div className="tstat">{lesson.stat}</div>
+                    <div className="tstatnote">{lesson.statNote}</div>
+                  </>
+                )}
+                <p className="tbody">{lesson.body}</p>
+                {lesson.turn && <p className="tturn">{lesson.turn}</p>}
+
+                <div className="termbox">
+                  <div className="eyebrow" style={{ color: "var(--amber)" }}>Термин: {lesson.term}</div>
+                  <div className="termnote">{lesson.termNote}</div>
+                </div>
+
+                <div className="taskbox">
+                  <div className="eyebrow" style={{ color: "var(--violet)" }}>Твой ход</div>
+                  <div className="tasktext">{lesson.task}</div>
+                </div>
+
+                <div className="nav">
+                  <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
+                  <button className="btn amber" onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "done")}>
+                    {lesson.quiz?.length ? "Проверить себя" : "Дальше"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {lessonStage === "quiz" && (
+              <Quiz items={lesson.quiz} onDone={() => setLessonStage("done")} />
+            )}
+
+            {lessonStage === "done" && (
+              <div>
+                <div className="card">
+                  <div className="eyebrow">Вывод урока</div>
+                  <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>{lesson.takeaway}</div>
+                </div>
+                <div className="nav">
+                  <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
+                  {lesson.index + 1 < lesson.total ? (
+                    <button className="btn amber" onClick={() => openLesson(lesson.index + 1)}>Урок {lesson.index + 2}</button>
+                  ) : (
+                    <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
+                  )}
+                </div>
+                {lesson.index + 1 >= lesson.total && (
+                  <div className="hint" style={{ marginTop: 12 }}>Курс пройден. Через месяц вернись и посмотри, сдвинулась ли слепая зона.</div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

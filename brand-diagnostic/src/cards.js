@@ -17,8 +17,16 @@ export const NICHE_OPTIONS = [
 
 // Ниша выбирается явно (тап), свайпы уточняют модель для Калибратора.
 export const SEED_CARDS = [
-  { id: "seed_who", type: "duo", tag: "Разминка", q: "Кто тебе платит?", left: "Обычные люди", right: "Компании" },
-  { id: "seed_how", type: "duo", tag: "Разминка", q: "Что у тебя покупают на самом деле?", left: "Готовый продукт", right: "Меня и мой опыт" },
+  {
+    id: "seed_who", type: "duo", tag: "Разминка", q: "Кто тебе платит?",
+    left: "Обычные люди", right: "Компании",
+    skippable: true, skipLabel: "И те, и другие", skipValue: "и обычные люди, и компании",
+  },
+  {
+    id: "seed_how", type: "duo", tag: "Разминка", q: "Что у тебя покупают на самом деле?",
+    left: "Готовый продукт", right: "Меня и мой опыт",
+    skippable: true, skipLabel: "Поровну", skipValue: "и продукт, и меня как эксперта",
+  },
 ];
 
 export const LINK_FIELDS = [

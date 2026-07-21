@@ -141,6 +141,24 @@ export const CSS = `
 .bd .pricecard{margin-top:26px;padding:22px 24px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .bd .price{font-family:var(--disp);font-weight:700;font-size:38px;letter-spacing:-.03em;line-height:1}
 .bd .pricenote{font-size:13.5px;color:var(--muted);margin-top:6px;max-width:34ch}
+.bd .buildlist{display:flex;flex-direction:column;gap:11px;text-align:left;margin-top:6px}
+.bd .bstep{display:flex;gap:12px;align-items:center;font-size:15.5px;color:var(--muted);opacity:.45;transition:all .4s}
+.bd .bstep .bmark{font-family:var(--mono);font-size:13px;width:14px;color:var(--violet)}
+.bd .bstep.now{opacity:1;color:var(--ink)}
+.bd .bstep.done{opacity:.8;color:var(--muted)}
+.bd .bstep.done .bmark{color:var(--amber)}
+.bd .termbox{margin-top:26px;padding:18px 20px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 16px 16px 0;background:rgba(255,255,255,.75)}
+.bd .termnote{font-size:15.5px;line-height:1.6;margin-top:8px;max-width:58ch}
+.bd .taskbox{margin-top:18px;padding:20px 22px;background:var(--ink);color:var(--bone);border-radius:18px}
+.bd .tasktext{font-size:16px;line-height:1.65;margin-top:8px;white-space:pre-line}
+.bd .quizbox{animation:fadeUp .4s both}
+.bd .quizq{font-family:var(--disp);font-weight:500;font-size:clamp(19px,3.4vw,24px);line-height:1.3;margin-top:12px}
+.bd .opt.good{border-color:var(--amber);background:rgba(232,161,58,.12)}
+.bd .opt.meh{opacity:.5}
+.bd .opt:disabled{cursor:default;transform:none;box-shadow:none}
+.bd .quizfb{margin-top:18px;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.85);border:1px solid var(--line);animation:fadeUp .35s both}
+.bd .qverdict{font-family:var(--disp);font-weight:600;font-size:18px}
+.bd .qexplain{font-size:15px;line-height:1.6;color:var(--muted);margin-top:6px;max-width:58ch}
 .bd .quote{max-width:46ch;animation:fadeUp .7s cubic-bezier(.2,.8,.2,1) both}
 .bd .qtext{font-family:var(--disp);font-weight:500;font-size:21px;line-height:1.45;letter-spacing:-.01em}
 .bd .qauthor{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:.06em}

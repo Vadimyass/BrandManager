@@ -13,6 +13,7 @@ import {
   runMethodist,
   type SeedAnswer,
 } from "./agents.ts";
+import { COURSE_LENGTH, runLesson } from "./course.ts";
 import type { LlmUsage } from "./llm.ts";
 
 const CORS = {
@@ -45,6 +46,8 @@ Deno.serve(async (req) => {
         return json(await deck(body));
       case "diagnose":
         return json(await diagnose(body));
+      case "lesson":
+        return json(await lesson(body));
       case "feedback":
         return json(await feedback(body));
       case "waitlist":
@@ -114,6 +117,13 @@ async function diagnose(body: DiagnosePayload) {
   if (error) throw error;
 
   return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
+}
+
+async function lesson(body: { index: number; calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
+  if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
+  const usage: LlmUsage[] = [];
+  const data = await runLesson(body.index ?? 0, body.diagnosis.weakness.axis, body.calibration, body.niche, body.diagnosis, usage);
+  return { status: "ok", lesson: data, total: COURSE_LENGTH };
 }
 
 function normalizeDiagnosis(d: Diagnosis) {
