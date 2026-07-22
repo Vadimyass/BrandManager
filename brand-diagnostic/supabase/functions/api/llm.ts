@@ -32,6 +32,8 @@ const JSON_REMINDER =
   "Верни ТОЛЬКО валидный JSON одним объектом. Без markdown, без пояснений до и после. " +
   "Внутри строк не используй перевод строки и двойные кавычки. Не ставь запятую перед закрывающей скобкой.";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function callModel(
   role: AgentRole,
   model: string,
@@ -40,28 +42,45 @@ async function callModel(
   maxTokens: number,
   usageLog: LlmUsage[],
 ): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: systemContent(model, system) },
-        { role: "user", content: user },
-      ],
-    }),
+  const body = JSON.stringify({
+    model,
+    max_tokens: maxTokens,
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: systemContent(model, system) },
+      { role: "user", content: user },
+    ],
   });
-  if (!res.ok) {
-    throw new Error(`OpenRouter ${res.status} (${role}/${model}): ${await res.text()}`);
+
+  // Бесплатные модели часто отдают 429/503 при всплеске — повторяем с нарастающей паузой.
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      usageLog.push({ role, model, ...data.usage });
+      return data.choices?.[0]?.message?.content ?? "";
+    }
+
+    const text = await res.text();
+    const retriable = res.status === 429 || res.status === 503 || res.status === 502;
+    if (!retriable || attempt === MAX_ATTEMPTS) {
+      throw new Error(`OpenRouter ${res.status} (${role}/${model}): ${text}`);
+    }
+    const hinted = Number(text.match(/"retry_after_seconds":\s*(\d+)/)?.[1]);
+    const waitMs = (hinted ? hinted * 1000 : 0) + 700 * attempt + Math.random() * 400;
+    console.warn(`OpenRouter ${res.status} (${role}/${model}), attempt ${attempt}/${MAX_ATTEMPTS}, wait ${Math.round(waitMs)}ms`);
+    await sleep(waitMs);
   }
-  const data = await res.json();
-  usageLog.push({ role, model, ...data.usage });
-  return data.choices?.[0]?.message?.content ?? "";
+  throw new Error(`OpenRouter unreachable (${role}/${model})`);
 }
 
 export async function llmJson<T>(

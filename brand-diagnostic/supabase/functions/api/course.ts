@@ -142,7 +142,10 @@ ${plan.anchor}
 Верни ТОЛЬКО JSON: {"title":"заголовок урока под этот блок, до 50 знаков","stat":"главная цифра истории крупно, до 18 знаков","statNote":"что это за цифра, до 80 знаков просто","body":"текст по правилам блока","turn":"суть в 1 предложении","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["подпись","подпись"],"examples":[{"case":"что случилось, кратко","why":"почему так вышло / почему сработало"}],"task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой"}`;
 }
 
-// 15 уроков = 5 понятий × 3 блока. Грузим по блоку (5 уроков параллельно): одна сборка на блок, внутри листается без сети.
+// 15 уроков = 5 понятий × 3 блока. Грузим по блоку.
+// Параллельность ограничена (по 2), иначе бесплатные модели упираются в лимит провайдера (429).
+const BLOCK_CONCURRENCY = 2;
+
 export async function runBlock(
   blockIndex: number,
   axis: string,
@@ -153,9 +156,14 @@ export async function runBlock(
 ): Promise<Lesson[]> {
   const b = Math.min(Math.max(blockIndex, 0), BLOCKS.length - 1);
   const plan = planFor(axis);
-  const results = await Promise.all(
-    plan.map((_, conceptIdx) => runLesson(b, conceptIdx, axis, cal, niche, diagnosis, usage)),
-  );
+  const results: Lesson[] = [];
+  for (let i = 0; i < plan.length; i += BLOCK_CONCURRENCY) {
+    const batch = plan.slice(i, i + BLOCK_CONCURRENCY);
+    const done = await Promise.all(
+      batch.map((_, j) => runLesson(b, i + j, axis, cal, niche, diagnosis, usage)),
+    );
+    results.push(...done);
+  }
   return results.sort((a, b2) => a.index - b2.index);
 }
 
