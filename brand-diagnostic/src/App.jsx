@@ -501,13 +501,23 @@ export default function App() {
                   {result.sprints.map((s, i) => (
                     <div className="next" key={i} style={{ marginBottom: 10 }}>
                       <b>Спринт {i + 1}: {s.title}</b>
-                      {joined && s.outcome ? <div style={{ marginTop: 6, opacity: .85 }}>{s.outcome}</div> : null}
+                      {s.outcome ? <div style={{ marginTop: 6, opacity: .85 }}>{s.outcome}</div> : null}
                     </div>
                   ))}
-                  {!joined && <div className="hint" style={{ color: "var(--muted-d)", marginTop: 10 }}>Детали спринтов — по email, бесплатно на время беты.</div>}
                 </div>
               )}
             </div>
+
+            {hook && (
+              <div className="coursecta">
+                <div>
+                  <div className="eyebrow" style={{ color: "var(--violet)" }}>Есть курс под твою слепую зону</div>
+                  <div className="cctatitle">{hook.course}</div>
+                  <div className="cctasub">5 коротких уроков с историями и заданиями. Первый — бесплатно, прямо сейчас.</div>
+                </div>
+                <button className="btn amber cctabtn" onClick={() => openLesson(0)}>Открыть курс →</button>
+              </div>
+            )}
 
             <div className="fbrow">
               <span className="fbq">Диагноз попал?</span>
@@ -521,34 +531,9 @@ export default function App() {
               )}
             </div>
 
-            <div className="share">
-              {joined ? (
-                <span className="pill" style={{ color: "var(--violet)", borderColor: "var(--violet)" }}>Ты в списке — детали спринтов уже открыты выше</span>
-              ) : (
-                <>
-                  <input className="field" style={{ maxWidth: 240 }} placeholder="email — открыть детали плана" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <button className="btn" disabled={!email.includes("@")} onClick={join}>Открыть план</button>
-                </>
-              )}
-            </div>
-
-            {hook && (
-              <div className="teaser">
-                <div className="eyebrow" style={{ color: "var(--violet)" }}>Первый урок из курса · открыт бесплатно</div>
-                <div className="tstat">{hook.stat}</div>
-                <div className="tstatnote">{hook.statNote}</div>
-                <p className="tbody">{hook.body}</p>
-                <p className="tturn">{hook.turn}</p>
-                <div className="tq">{hook.question}</div>
-                <div className="tlesson">{hook.lesson}</div>
-                <button className="btn amber" style={{ marginTop: 20 }} onClick={() => setPhase("offer")}>
-                  Дальше: {hook.course}
-                </button>
-              </div>
-            )}
-
             <div className="nav">
               <button className="btn ghost" onClick={reset}>Пройти заново</button>
+              <button className="btn" onClick={() => setPhase("offer")}>Что в курсе</button>
             </div>
             <div className="foot">Бета · колода и диагноз сгенерированы под твою нишу</div>
           </div>
@@ -587,12 +572,16 @@ export default function App() {
               </div>
             )}
 
-            <div className="pricecard">
+            <button className="btn amber" style={{ width: "100%", marginTop: 24, padding: "16px 24px", fontSize: 16 }} onClick={() => openLesson(0)}>
+              Начать первый урок — бесплатно
+            </button>
+
+            <div className="pricecard" style={{ marginTop: 14 }}>
               <div>
                 <div className="price">{COURSE_PRICE}</div>
-                <div className="pricenote">разово, доступ навсегда · дешевле одного часа дизайнера</div>
+                <div className="pricenote">весь курс навсегда · без почты и регистрации</div>
               </div>
-              <button className="btn amber" onClick={() => setPhase("checkout")}>Забрать курс</button>
+              <button className="btn ghost" onClick={() => setPhase("checkout")}>Забрать весь курс</button>
             </div>
 
             <div className="nav">

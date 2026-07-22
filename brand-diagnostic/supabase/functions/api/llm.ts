@@ -18,6 +18,16 @@ export interface LlmUsage {
   completion_tokens?: number;
 }
 
+// Уровень-1 кэш промптов: системный промпт статичен в каждом вызове роли.
+// Для Claude-моделей помечаем его cache_control — кэш-риды дают скидку до 90% на входную часть.
+// Для остальных моделей отправляем обычной строкой (массив-контент они могут не принять).
+function systemContent(model: string, system: string): unknown {
+  if (model.startsWith("anthropic/")) {
+    return [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+  }
+  return system;
+}
+
 const JSON_REMINDER =
   "Верни ТОЛЬКО валидный JSON одним объектом. Без markdown, без пояснений до и после. " +
   "Внутри строк не используй перевод строки и двойные кавычки. Не ставь запятую перед закрывающей скобкой.";
@@ -41,7 +51,7 @@ async function callModel(
       max_tokens: maxTokens,
       temperature: 0.2,
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: systemContent(model, system) },
         { role: "user", content: user },
       ],
     }),

@@ -114,6 +114,11 @@ export const CSS = `
 .bd .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:bdspin 1s linear infinite}
 @keyframes bdspin{to{transform:rotate(360deg)}}
 .bd .center{display:flex;flex-direction:column;align-items:center;gap:18px;padding:60px 0;text-align:center}
+.bd .coursecta{margin-top:20px;padding:20px 22px;border-radius:20px;background:linear-gradient(120deg,rgba(90,84,201,.1),rgba(232,161,58,.12));border:1px solid rgba(90,84,201,.25);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;animation:fadeUp .5s .15s both}
+.bd .cctatitle{font-family:var(--disp);font-weight:700;font-size:clamp(19px,3.6vw,24px);letter-spacing:-.01em;margin-top:4px}
+.bd .cctasub{font-size:14px;color:var(--muted);line-height:1.5;margin-top:6px;max-width:44ch}
+.bd .cctabtn{white-space:nowrap;padding:15px 26px;font-size:16px}
+@media(max-width:520px){.bd .coursecta{flex-direction:column;align-items:stretch}.bd .cctabtn{width:100%}}
 .bd .teaser{margin-top:34px;padding:clamp(22px,4vw,34px);background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:24px;box-shadow:0 20px 50px rgba(22,23,43,.07);animation:fadeUp .5s .2s both}
 .bd .tstat{font-family:var(--disp);font-weight:700;font-size:clamp(34px,7vw,54px);letter-spacing:-.03em;line-height:1;margin:14px 0 8px;background:linear-gradient(92deg,var(--ink),var(--violet));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .bd .tstatnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:46ch}
