@@ -114,6 +114,22 @@ ${plan.anchor}
 Верни ТОЛЬКО JSON: {"title":"${plan.title}","stat":"главная цифра истории крупно, до 18 знаков","statNote":"что это за цифра, до 80 знаков простыми словами","body":"пересказ истории простыми словами","turn":"что произошло на самом деле, 1 предложение","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["короткая подпись","короткая подпись","короткая подпись"],"task":"простое задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой"}`;
 }
 
+// Генерируем все уроки разом и параллельно: одна сборка на входе, дальше листается без сети.
+// Параллельно, а не последовательно — латентность ≈ самого долгого урока, а не суммы.
+export async function runCourse(
+  axis: string,
+  cal: Calibration,
+  niche: string | undefined,
+  diagnosis: Diagnosis,
+  usage: LlmUsage[],
+): Promise<Lesson[]> {
+  const plan = planFor(axis);
+  const results = await Promise.all(
+    plan.map((_, i) => runLesson(i, axis, cal, niche, diagnosis, usage)),
+  );
+  return results.sort((a, b) => a.index - b.index);
+}
+
 export async function runLesson(
   index: number,
   axis: string,

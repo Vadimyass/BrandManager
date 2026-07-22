@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
-import { diagnose, getDeck, getLesson, joinWaitlist, sendFeedback } from "./api.js";
+import { diagnose, getCourse, getDeck, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
 const FLY_MS = 420;
@@ -242,9 +242,10 @@ export default function App() {
   const [email, setEmail] = useState(s.email ?? "");
   const [joined, setJoined] = useState(s.joined ?? false);
   const [intent, setIntent] = useState(s.intent ?? null);
-  const [lesson, setLesson] = useState(s.lesson ?? null);
+  const [lessons, setLessons] = useState(s.lessons ?? null);
   const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
+  const lesson = lessons?.[lessonIndex] ?? null;
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
@@ -299,15 +300,28 @@ export default function App() {
     });
   }
 
-  function openLesson(index) {
-    setLessonIndex(index);
+  // Весь курс собирается одним запросом; дальше уроки листаются мгновенно, без загрузки.
+  function openCourse() {
+    if (lessons?.length) {
+      setLessonIndex(0);
+      setLessonStage("read");
+      setPhase("lesson");
+      return;
+    }
     guard(async () => {
       setPhase("building");
-      const res = await getLesson(index, calibration, niche, result);
-      setLesson(res.lesson);
+      const res = await getCourse(calibration, niche, result);
+      setLessons(res.lessons);
+      setLessonIndex(0);
       setLessonStage("read");
       setPhase("lesson");
     });
+  }
+
+  function goToLesson(index) {
+    setLessonIndex(index);
+    setLessonStage("read");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
@@ -315,10 +329,10 @@ export default function App() {
     if (phase === "intro") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-      result, diagnosticId, feedbackSent, email, joined, intent, lesson, lessonStage, lessonIndex,
+      result, diagnosticId, feedbackSent, email, joined, intent, lessons, lessonStage, lessonIndex,
     });
   }, [phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-    result, diagnosticId, feedbackSent, email, joined, intent, lesson, lessonStage, lessonIndex]);
+    result, diagnosticId, feedbackSent, email, joined, intent, lessons, lessonStage, lessonIndex]);
 
   // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
   useEffect(() => {
@@ -337,14 +351,14 @@ export default function App() {
     } else if (saved.phase === "analyzing" && saved.decisions?.length) {
       assess(saved.links, saved.decisions);
     } else if (saved.phase === "building" && saved.result) {
-      openLesson(saved.lessonIndex ?? 0);
+      openCourse();
     }
   }, []);
 
   const reset = () => {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
-    setLesson(null); setLessonStage("read"); setLessonIndex(0);
+    setLessons(null); setLessonStage("read"); setLessonIndex(0);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -515,7 +529,7 @@ export default function App() {
                   <div className="cctatitle">{hook.course}</div>
                   <div className="cctasub">5 коротких уроков с историями и заданиями. Первый — бесплатно, прямо сейчас.</div>
                 </div>
-                <button className="btn amber cctabtn" onClick={() => openLesson(0)}>Открыть курс →</button>
+                <button className="btn amber cctabtn" onClick={openCourse}>Открыть курс →</button>
               </div>
             )}
 
@@ -572,8 +586,8 @@ export default function App() {
               </div>
             )}
 
-            <button className="btn amber" style={{ width: "100%", marginTop: 24, padding: "16px 24px", fontSize: 16 }} onClick={() => openLesson(0)}>
-              Начать первый урок — бесплатно
+            <button className="btn amber" style={{ width: "100%", marginTop: 24, padding: "16px 24px", fontSize: 16 }} onClick={openCourse}>
+              Начать курс — бесплатно
             </button>
 
             <div className="pricecard" style={{ marginTop: 14 }}>
@@ -643,7 +657,7 @@ export default function App() {
 
             {joined && (
               <div style={{ marginTop: 20 }}>
-                <button className="btn amber" onClick={() => openLesson(0)}>Открыть первый урок</button>
+                <button className="btn amber" onClick={openCourse}>Открыть курс</button>
                 <div className="hint" style={{ marginTop: 10 }}>Доступ на время беты открыт — курс собирается под тебя прямо сейчас.</div>
               </div>
             )}
@@ -722,7 +736,7 @@ export default function App() {
                 <div className="nav">
                   <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
                   {lesson.index + 1 < lesson.total ? (
-                    <button className="btn amber" onClick={() => openLesson(lesson.index + 1)}>Урок {lesson.index + 2}</button>
+                    <button className="btn amber" onClick={() => goToLesson(lesson.index + 1)}>Урок {lesson.index + 2}</button>
                   ) : (
                     <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
                   )}
