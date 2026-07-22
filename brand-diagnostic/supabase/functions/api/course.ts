@@ -19,6 +19,7 @@ export interface Lesson {
   turn: string;
   term: string;
   termNote: string;
+  scheme?: string[];
   task: string;
   quiz: QuizItem[];
   takeaway: string;
@@ -71,26 +72,38 @@ export function planFor(axis: string): LessonPlan[] {
 
 const PLAIN_LANGUAGE_RULE = `ЯЗЫК: простые слова, как для друга без бизнес-образования. ЗАПРЕЩЕНЫ аббревиатуры и жаргон: MRR, LTV, CAC, churn, retention, burn rate, UX, лиды, performance, юнит-экономика. Вместо них человеческие слова.`;
 
-function lessonSystem(plan: LessonPlan, cal: Calibration, niche: string | undefined, diagnosis: Diagnosis, isFinal: boolean): string {
-  const base = `Ты — автор короткого практического урока для основателя. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.
+function lessonSystem(plan: LessonPlan, cal: Calibration, niche: string | undefined, diagnosis: Diagnosis, isFinal: boolean, index: number): string {
+  // Первые уроки — самые простые: человек мог вообще никогда не думать о маркетинге.
+  const easy = index <= 1;
+  const simplicity = easy
+    ? `ЭТО ОДИН ИЗ ПЕРВЫХ УРОКОВ. Пиши максимально просто, для человека, который НИКОГДА не думал о маркетинге и легко пугается новых слов.
+- Очень короткий текст: body не длиннее 2 коротких предложений, termNote — 1 простое предложение.
+- Никаких терминов в body вообще. Термин вводи мягко в termNote, объясняя бытовым примером.
+- Одна мысль на урок. Не грузи.
+- quiz: РОВНО 1 вопрос, простая житейская ситуация.`
+    : `- body 2–3 коротких предложения. Одна мысль.
+- quiz: ровно 2 вопроса, ситуации из его ниши.`;
+
+  const base = `Ты — автор короткого урока для основателя, который в маркетинге новичок. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.
 
 Урок называется «${plan.title}». Главная мысль: ${plan.focus}. Ключевое понятие: ${plan.term}.
 
 ${PLAIN_LANGUAGE_RULE}
 
 Правила:
-- Обращайся на «ты», уважительно, без менторства и без мотивационных лозунгов.
-- Урок читается за 3 минуты. Коротко.
-- Задание (task) — конкретное действие с ЕГО продуктом в ЕГО нише, выполнимое за вечер, без бюджета.
-- quiz: ровно 2 вопроса. Каждый — короткая ситуация из его ниши с двумя вариантами, где оба звучат разумно, но один явно лучше. explain объясняет, почему второй вариант тоже выглядел логичным.
-- Никаких выдуманных цифр: используй только числа из истории ниже.`;
+- Обращайся на «ты», тепло, без менторства и лозунгов. Как будто объясняешь другу за кофе.
+${simplicity}
+- Задание (task) — одно простое действие с ЕГО продуктом, выполнимое за вечер без бюджета и без сложных инструментов.
+- В quiz оба варианта звучат разумно, но один явно лучше. explain (1 предложение) мягко объясняет, почему второй тоже выглядел логичным.
+- scheme — простая наглядная схема из 2–4 коротких подписей (по 1–3 слова), которую покажем картинкой-стрелками. Например путь клиента: ["Увидел","Зашёл","Купил"]. Только если это реально помогает понять; иначе пустой массив.
+- Никаких выдуманных цифр: только числа из истории.`;
 
   if (isFinal) {
     return `${base}
 
-Это финальный урок — без истории. Собери всё в план: три конкретных шага под его бизнес, каждый с понятным результатом. Верни stat = "3 шага", statNote — короткая строка про его слабое место.
+Это финальный урок — без истории. Собери всё в план: три простых шага под его бизнес, каждый с понятным результатом. stat = "3 шага", statNote — короткая строка про его слабое место.
 
-Верни ТОЛЬКО JSON: {"title":"...","stat":"...","statNote":"...","body":"1–2 абзаца, что он теперь знает","turn":"переход к плану, 1 предложение","term":"${plan.term}","termNote":"1 предложение","task":"три шага одним текстом, каждый с новой строки","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод всего курса одной строкой"}`;
+Верни ТОЛЬКО JSON: {"title":"...","stat":"...","statNote":"...","body":"что он теперь умеет, 2 коротких предложения","turn":"переход к плану, 1 предложение","term":"${plan.term}","termNote":"1 простое предложение","scheme":["шаг 1","шаг 2","шаг 3"],"task":"три шага, каждый с новой строки","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод всего курса одной строкой"}`;
   }
 
   return `${base}
@@ -98,7 +111,7 @@ ${PLAIN_LANGUAGE_RULE}
 ИСТОРИЯ ДЛЯ КРЮЧКА (используй её факты, не выдумывай новых):
 ${plan.anchor}
 
-Верни ТОЛЬКО JSON: {"title":"${plan.title}","stat":"главная цифра истории крупно, до 18 знаков","statNote":"что это за цифра, до 90 знаков","body":"пересказ истории, 2–4 предложения","turn":"что произошло на самом деле, 1–2 предложения","term":"${plan.term}","termNote":"объяснение понятия через эту историю, 2–3 предложения","task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."},{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой"}`;
+Верни ТОЛЬКО JSON: {"title":"${plan.title}","stat":"главная цифра истории крупно, до 18 знаков","statNote":"что это за цифра, до 80 знаков простыми словами","body":"пересказ истории простыми словами","turn":"что произошло на самом деле, 1 предложение","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["короткая подпись","короткая подпись","короткая подпись"],"task":"простое задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой"}`;
 }
 
 export async function runLesson(
@@ -117,14 +130,18 @@ export async function runLesson(
     ? `Его план на месяц, который уже показали: ${(diagnosis as Diagnosis & { sprints?: { title: string }[] }).sprints?.map((s) => s.title).join(" · ") ?? "нет"}`
     : `Диагноз: ${diagnosis.diagnosis}`;
 
-  const lesson = await llmJson<Lesson>("assessor", lessonSystem(plan[i], cal, niche, diagnosis, isFinal), userMsg, usage, 1600);
+  const lesson = await llmJson<Lesson>("assessor", lessonSystem(plan[i], cal, niche, diagnosis, isFinal, i), userMsg, usage, 1600);
 
   lesson.index = i;
   lesson.total = plan.length;
   lesson.title = lesson.title || plan[i].title;
+  lesson.scheme = Array.isArray(lesson.scheme)
+    ? lesson.scheme.filter((x) => typeof x === "string" && x.trim()).slice(0, 4)
+    : [];
+  const maxQuiz = i <= 1 ? 1 : 2;
   lesson.quiz = (lesson.quiz ?? [])
     .filter((q) => q?.q && q?.left && q?.right)
-    .slice(0, 2)
+    .slice(0, maxQuiz)
     .map((q) => ({ ...q, correct: q.correct === "right" ? "right" : "left" }));
   return lesson;
 }

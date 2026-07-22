@@ -147,6 +147,10 @@ export const CSS = `
 .bd .bstep.now{opacity:1;color:var(--ink)}
 .bd .bstep.done{opacity:.8;color:var(--muted)}
 .bd .bstep.done .bmark{color:var(--amber)}
+.bd .scheme{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:22px;padding:18px;border-radius:16px;background:rgba(90,84,201,.07);border:1px dashed rgba(90,84,201,.3)}
+.bd .schemepart{display:inline-flex;align-items:center;gap:6px}
+.bd .schemenode{font-family:var(--disp);font-weight:500;font-size:14px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;white-space:nowrap;animation:fadeUp .4s both}
+.bd .schemearrow{color:var(--violet);font-size:16px}
 .bd .termbox{margin-top:26px;padding:18px 20px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 16px 16px 0;background:rgba(255,255,255,.75)}
 .bd .termnote{font-size:15.5px;line-height:1.6;margin-top:8px;max-width:58ch}
 .bd .taskbox{margin-top:18px;padding:20px 22px;background:var(--ink);color:var(--bone);border-radius:18px}

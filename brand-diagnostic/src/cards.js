@@ -27,6 +27,21 @@ export const SEED_CARDS = [
     left: "Готовый продукт", right: "Меня и мой опыт",
     skippable: true, skipLabel: "Поровну", skipValue: "и продукт, и меня как эксперта",
   },
+  {
+    id: "seed_where", type: "duo", tag: "Разминка", q: "Где происходит сделка?",
+    left: "Онлайн", right: "Вживую",
+    skippable: true, skipLabel: "И там, и там", skipValue: "и онлайн, и вживую",
+  },
+  {
+    id: "seed_repeat", type: "duo", tag: "Разминка", q: "Как часто покупают?",
+    left: "Один раз", right: "Возвращаются регулярно",
+    skippable: true, skipLabel: "По-разному", skipValue: "по-разному",
+  },
+  {
+    id: "seed_ticket", type: "duo", tag: "Разминка", q: "Твой средний чек — это…",
+    left: "Мелкая покупка", right: "Дорогое решение",
+    skippable: true, skipLabel: "Средне", skipValue: "средний чек",
+  },
 ];
 
 export const LINK_FIELDS = [

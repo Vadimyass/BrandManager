@@ -690,6 +690,17 @@ export default function App() {
                 <p className="tbody">{lesson.body}</p>
                 {lesson.turn && <p className="tturn">{lesson.turn}</p>}
 
+                {lesson.scheme?.length > 1 && (
+                  <div className="scheme">
+                    {lesson.scheme.map((s, i) => (
+                      <span className="schemepart" key={i}>
+                        <span className="schemenode">{s}</span>
+                        {i < lesson.scheme.length - 1 && <span className="schemearrow">→</span>}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="termbox">
                   <div className="eyebrow" style={{ color: "var(--amber)" }}>Термин: {lesson.term}</div>
                   <div className="termnote">{lesson.termNote}</div>
