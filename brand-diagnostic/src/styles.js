@@ -156,6 +156,11 @@ export const CSS = `
 .bd .schemepart{display:inline-flex;align-items:center;gap:6px}
 .bd .schemenode{font-family:var(--disp);font-weight:500;font-size:14px;padding:9px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;white-space:nowrap;animation:fadeUp .4s both}
 .bd .schemearrow{color:var(--violet);font-size:16px}
+.bd .examples{margin-top:22px}
+.bd .example{padding:14px 16px;margin-top:10px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.8)}
+.bd .excase{font-size:15px;font-weight:500;line-height:1.5}
+.bd .exwhy{font-size:14.5px;color:var(--muted);line-height:1.55;margin-top:6px}
+.bd .exmk{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--violet)}
 .bd .termbox{margin-top:26px;padding:18px 20px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 16px 16px 0;background:rgba(255,255,255,.75)}
 .bd .termnote{font-size:15.5px;line-height:1.6;margin-top:8px;max-width:58ch}
 .bd .taskbox{margin-top:18px;padding:20px 22px;background:var(--ink);color:var(--bone);border-radius:18px}

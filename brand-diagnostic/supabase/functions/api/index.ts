@@ -13,7 +13,7 @@ import {
   runMethodist,
   type SeedAnswer,
 } from "./agents.ts";
-import { COURSE_LENGTH, runCourse, runLesson } from "./course.ts";
+import { BLOCKS, COURSE_LENGTH, runBlock } from "./course.ts";
 import type { LlmUsage } from "./llm.ts";
 
 const CORS = {
@@ -46,8 +46,6 @@ Deno.serve(async (req) => {
         return json(await deck(body));
       case "diagnose":
         return json(await diagnose(body));
-      case "lesson":
-        return json(await lesson(body));
       case "course":
         return json(await course(body));
       case "feedback":
@@ -121,18 +119,18 @@ async function diagnose(body: DiagnosePayload) {
   return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
 }
 
-async function lesson(body: { index: number; calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
+async function course(body: { block?: number; calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
   if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
   const usage: LlmUsage[] = [];
-  const data = await runLesson(body.index ?? 0, body.diagnosis.weakness.axis, body.calibration, body.niche, body.diagnosis, usage);
-  return { status: "ok", lesson: data, total: COURSE_LENGTH };
-}
-
-async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
-  if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
-  const usage: LlmUsage[] = [];
-  const lessons = await runCourse(body.diagnosis.weakness.axis, body.calibration, body.niche, body.diagnosis, usage);
-  return { status: "ok", lessons, total: COURSE_LENGTH };
+  const block = body.block ?? 0;
+  const lessons = await runBlock(block, body.diagnosis.weakness.axis, body.calibration, body.niche, body.diagnosis, usage);
+  return {
+    status: "ok",
+    block,
+    lessons,
+    total: COURSE_LENGTH,
+    blocks: BLOCKS.map((b) => b.title),
+  };
 }
 
 function normalizeDiagnosis(d: Diagnosis) {

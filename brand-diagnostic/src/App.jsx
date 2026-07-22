@@ -242,10 +242,13 @@ export default function App() {
   const [email, setEmail] = useState(s.email ?? "");
   const [joined, setJoined] = useState(s.joined ?? false);
   const [intent, setIntent] = useState(s.intent ?? null);
-  const [lessons, setLessons] = useState(s.lessons ?? null);
+  const [lessons, setLessons] = useState(s.lessons ?? {});
+  const [blocks, setBlocks] = useState(s.blocks ?? []);
+  const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 15);
   const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
   const lesson = lessons?.[lessonIndex] ?? null;
+  const PER_BLOCK = 5;
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
@@ -300,28 +303,40 @@ export default function App() {
     });
   }
 
-  // Весь курс собирается одним запросом; дальше уроки листаются мгновенно, без загрузки.
-  function openCourse() {
-    if (lessons?.length) {
-      setLessonIndex(0);
-      setLessonStage("read");
-      setPhase("lesson");
-      return;
-    }
+  // Курс грузится по блоку (5 уроков параллельно). Внутри блока листается мгновенно; смена блока — одна сборка.
+  function loadBlock(blockIdx, opts = {}) {
     guard(async () => {
       setPhase("building");
-      const res = await getCourse(calibration, niche, result);
-      setLessons(res.lessons);
-      setLessonIndex(0);
+      const res = await getCourse(blockIdx, calibration, niche, result);
+      const merged = { ...lessons };
+      for (const l of res.lessons) merged[l.index] = l;
+      setLessons(merged);
+      if (res.blocks) setBlocks(res.blocks);
+      if (res.total) setCourseTotal(res.total);
+      setLessonIndex(opts.goTo ?? blockIdx * PER_BLOCK);
       setLessonStage("read");
       setPhase("lesson");
     });
   }
 
+  function openCourse() {
+    if (lessons?.[0]) {
+      setLessonIndex(0);
+      setLessonStage("read");
+      setPhase("lesson");
+      return;
+    }
+    loadBlock(0);
+  }
+
   function goToLesson(index) {
-    setLessonIndex(index);
-    setLessonStage("read");
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    if (lessons?.[index]) {
+      setLessonIndex(index);
+      setLessonStage("read");
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      loadBlock(Math.floor(index / PER_BLOCK), { goTo: index });
+    }
   }
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
@@ -329,10 +344,10 @@ export default function App() {
     if (phase === "intro") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-      result, diagnosticId, feedbackSent, email, joined, intent, lessons, lessonStage, lessonIndex,
+      result, diagnosticId, feedbackSent, email, joined, intent, lessons, blocks, courseTotal, lessonStage, lessonIndex,
     });
   }, [phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-    result, diagnosticId, feedbackSent, email, joined, intent, lessons, lessonStage, lessonIndex]);
+    result, diagnosticId, feedbackSent, email, joined, intent, lessons, blocks, courseTotal, lessonStage, lessonIndex]);
 
   // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
   useEffect(() => {
@@ -351,14 +366,15 @@ export default function App() {
     } else if (saved.phase === "analyzing" && saved.decisions?.length) {
       assess(saved.links, saved.decisions);
     } else if (saved.phase === "building" && saved.result) {
-      openCourse();
+      const idx = saved.lessonIndex ?? 0;
+      loadBlock(Math.floor(idx / PER_BLOCK), { goTo: idx });
     }
   }, []);
 
   const reset = () => {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
-    setLessons(null); setLessonStage("read"); setLessonIndex(0);
+    setLessons({}); setBlocks([]); setCourseTotal(15); setLessonStage("read"); setLessonIndex(0);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -527,7 +543,7 @@ export default function App() {
                 <div>
                   <div className="eyebrow" style={{ color: "var(--violet)" }}>Есть курс под твою слепую зону</div>
                   <div className="cctatitle">{hook.course}</div>
-                  <div className="cctasub">5 коротких уроков с историями и заданиями. Первый — бесплатно, прямо сейчас.</div>
+                  <div className="cctasub">15 уроков в 3 блока: что это, почему так у тебя, что делать. Первый — бесплатно, прямо сейчас.</div>
                 </div>
                 <button className="btn amber cctabtn" onClick={openCourse}>Открыть курс →</button>
               </div>
@@ -678,8 +694,10 @@ export default function App() {
 
         {phase === "lesson" && lesson && (
           <div className="phase">
-            <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / lesson.total) * 100}%` }} /></div>
-            <div className="qnum">Урок {lesson.index + 1} из {lesson.total}</div>
+            <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / (courseTotal || lesson.total)) * 100}%` }} /></div>
+            <div className="qnum">
+              {lesson.blockTitle ? `${lesson.blockTitle} · ` : ""}урок {lesson.index + 1} из {courseTotal || lesson.total}
+            </div>
             <h1 style={{ fontSize: "clamp(24px,4.6vw,34px)", margin: "10px 0 20px" }}>{lesson.title}</h1>
 
             {lessonStage === "read" && (
@@ -695,11 +713,23 @@ export default function App() {
 
                 {lesson.scheme?.length > 1 && (
                   <div className="scheme">
-                    {lesson.scheme.map((s, i) => (
+                    {lesson.scheme.map((sc, i) => (
                       <span className="schemepart" key={i}>
-                        <span className="schemenode">{s}</span>
+                        <span className="schemenode">{sc}</span>
                         {i < lesson.scheme.length - 1 && <span className="schemearrow">→</span>}
                       </span>
+                    ))}
+                  </div>
+                )}
+
+                {lesson.examples?.length > 0 && (
+                  <div className="examples">
+                    <div className="eyebrow" style={{ color: "var(--violet)" }}>Разбор: почему так вышло</div>
+                    {lesson.examples.map((ex, i) => (
+                      <div className="example" key={i}>
+                        <div className="excase">{ex.case}</div>
+                        <div className="exwhy"><span className="exmk">почему:</span> {ex.why}</div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -709,10 +739,12 @@ export default function App() {
                   <div className="termnote">{lesson.termNote}</div>
                 </div>
 
-                <div className="taskbox">
-                  <div className="eyebrow" style={{ color: "var(--violet)" }}>Твой ход</div>
-                  <div className="tasktext">{lesson.task}</div>
-                </div>
+                {lesson.task && (
+                  <div className="taskbox">
+                    <div className="eyebrow" style={{ color: "var(--violet)" }}>Твой ход</div>
+                    <div className="tasktext">{lesson.task}</div>
+                  </div>
+                )}
 
                 <div className="nav">
                   <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
@@ -727,25 +759,33 @@ export default function App() {
               <Quiz items={lesson.quiz} onDone={() => setLessonStage("done")} />
             )}
 
-            {lessonStage === "done" && (
-              <div>
-                <div className="card">
-                  <div className="eyebrow">Вывод урока</div>
-                  <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>{lesson.takeaway}</div>
-                </div>
-                <div className="nav">
-                  <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
-                  {lesson.index + 1 < lesson.total ? (
-                    <button className="btn amber" onClick={() => goToLesson(lesson.index + 1)}>Урок {lesson.index + 2}</button>
-                  ) : (
-                    <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
+            {lessonStage === "done" && (() => {
+              const nextIdx = lesson.index + 1;
+              const total = courseTotal || lesson.total;
+              const startsBlock = nextIdx % PER_BLOCK === 0;
+              const nextBlockTitle = blocks[Math.floor(nextIdx / PER_BLOCK)];
+              return (
+                <div>
+                  <div className="card">
+                    <div className="eyebrow">Вывод урока</div>
+                    <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>{lesson.takeaway}</div>
+                  </div>
+                  <div className="nav">
+                    <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
+                    {nextIdx < total ? (
+                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>
+                        {startsBlock && nextBlockTitle ? `Блок: ${nextBlockTitle}` : `Урок ${nextIdx + 1}`}
+                      </button>
+                    ) : (
+                      <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
+                    )}
+                  </div>
+                  {nextIdx >= total && (
+                    <div className="hint" style={{ marginTop: 12 }}>Курс пройден. Через месяц вернись и посмотри, сдвинулась ли слепая зона.</div>
                   )}
                 </div>
-                {lesson.index + 1 >= lesson.total && (
-                  <div className="hint" style={{ marginTop: 12 }}>Курс пройден. Через месяц вернись и посмотри, сдвинулась ли слепая зона.</div>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
