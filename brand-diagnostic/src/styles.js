@@ -173,6 +173,14 @@ export const CSS = `
 .bd .quizfb{margin-top:18px;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.85);border:1px solid var(--line);animation:fadeUp .35s both}
 .bd .qverdict{font-family:var(--disp);font-weight:600;font-size:18px}
 .bd .qexplain{font-size:15px;line-height:1.6;color:var(--muted);margin-top:6px;max-width:58ch}
+.bd .scorebig{font-family:var(--disp);font-weight:700;font-size:56px;line-height:1;letter-spacing:-.03em;color:var(--amber)}
+.bd .scoremax{font-size:24px;color:var(--muted)}
+.bd .critrow{margin-top:14px}
+.bd .crithead{display:flex;justify-content:space-between;gap:12px;font-size:14.5px;line-height:1.4}
+.bd .critpts{font-family:var(--mono);font-size:13px;color:var(--violet);white-space:nowrap}
+.bd .critbar{height:6px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden}
+.bd .critfill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--violet),var(--amber));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.bd .critnote{font-size:13.5px;color:var(--muted);margin-top:5px;line-height:1.5}
 .bd .quote{max-width:46ch;animation:fadeUp .7s cubic-bezier(.2,.8,.2,1) both}
 .bd .qtext{font-family:var(--disp);font-weight:500;font-size:21px;line-height:1.45;letter-spacing:-.01em}
 .bd .qauthor{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;letter-spacing:.06em}

@@ -14,6 +14,7 @@ import {
   type SeedAnswer,
 } from "./agents.ts";
 import { courseLength, runCourse } from "./course.ts";
+import { gradeHomework, homeworkFor } from "./homework.ts";
 import type { LlmUsage } from "./llm.ts";
 
 const CORS = {
@@ -48,6 +49,8 @@ Deno.serve(async (req) => {
         return json(await diagnose(body));
       case "course":
         return json(await course(body));
+      case "grade":
+        return json(await grade(body));
       case "feedback":
         return json(await feedback(body));
       case "waitlist":
@@ -125,6 +128,15 @@ async function course(body: { calibration: Calibration; niche?: string; diagnosi
   const axis = body.diagnosis.weakness.axis;
   const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage);
   return { status: "ok", lessons, total: courseLength(axis) };
+}
+
+async function grade(body: { axis: string; index: number; task: string; submission: string; calibration: Calibration; niche?: string }) {
+  const submission = (body.submission ?? "").trim();
+  if (submission.length < 3) throw new Error("empty submission");
+  const usage: LlmUsage[] = [];
+  const hw = homeworkFor(body.axis, body.index ?? 0, body.task ?? "");
+  const result = await gradeHomework(hw, submission, body.calibration, body.niche, usage);
+  return { status: "ok", ...result, max: 10 };
 }
 
 function normalizeDiagnosis(d: Diagnosis) {

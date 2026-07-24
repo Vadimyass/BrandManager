@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
-import { diagnose, getCourse, getDeck, joinWaitlist, sendFeedback } from "./api.js";
+import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
 const FLY_MS = 420;
@@ -246,6 +246,9 @@ export default function App() {
   const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 10);
   const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
+  const [submission, setSubmission] = useState("");
+  const [grade, setGrade] = useState(null);
+  const [grading, setGrading] = useState(false);
   const lesson = lessons?.[lessonIndex] ?? null;
   const lastAction = useRef(null);
   const resumed = useRef(false);
@@ -326,7 +329,21 @@ export default function App() {
     if (!lessons?.[index]) return;
     setLessonIndex(index);
     setLessonStage("read");
+    setSubmission(""); setGrade(null); setGrading(false);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function submitHomework() {
+    if (submission.trim().length < 3) return;
+    setGrading(true);
+    try {
+      const res = await gradeHomework(result.weakness.axis, lesson.index, lesson.task, submission, calibration, niche);
+      setGrade(res);
+    } catch (e) {
+      setGrade({ error: String(e?.message ?? e) });
+    } finally {
+      setGrading(false);
+    }
   }
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
@@ -364,6 +381,7 @@ export default function App() {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
+    setSubmission(""); setGrade(null); setGrading(false);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -735,15 +753,65 @@ export default function App() {
 
                 <div className="nav">
                   <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
-                  <button className="btn amber" onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "done")}>
-                    {lesson.quiz?.length ? "Проверить себя" : "Дальше"}
+                  <button className="btn amber" onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
+                    {lesson.quiz?.length ? "Проверить себя" : "К заданию"}
                   </button>
                 </div>
               </div>
             )}
 
             {lessonStage === "quiz" && (
-              <Quiz items={lesson.quiz} onDone={() => setLessonStage("done")} />
+              <Quiz items={lesson.quiz} onDone={() => setLessonStage("homework")} />
+            )}
+
+            {lessonStage === "homework" && (
+              <div className="quizbox">
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>Домашка · оценю из 10</div>
+                <div className="quizq">{lesson.task}</div>
+                {!grade ? (
+                  <>
+                    <textarea
+                      className="field"
+                      style={{ minHeight: 120, marginTop: 14 }}
+                      placeholder="Твой ответ по своему продукту…"
+                      value={submission}
+                      onChange={(e) => setSubmission(e.target.value)}
+                    />
+                    <div className="nav">
+                      <button className="btn ghost" onClick={() => setLessonStage("done")}>Пропустить</button>
+                      <button className="btn amber" disabled={submission.trim().length < 3 || grading} onClick={submitHomework}>
+                        {grading ? "Проверяю…" : "Сдать на проверку"}
+                      </button>
+                    </div>
+                  </>
+                ) : grade.error ? (
+                  <div className="err" style={{ marginTop: 14 }}>{grade.error}
+                    <div className="nav">
+                      <button className="btn ghost" onClick={() => setLessonStage("done")}>Пропустить</button>
+                      <button className="btn" onClick={() => setGrade(null)}>Ещё раз</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 16 }}>
+                    <div className="scorebig">{grade.total}<span className="scoremax"> / {grade.max}</span></div>
+                    {grade.breakdown?.map((b, i) => (
+                      <div className="critrow" key={i}>
+                        <div className="crithead">
+                          <span>{b.label}</span>
+                          <span className="critpts">{b.awarded}/{b.max}</span>
+                        </div>
+                        <div className="critbar"><div className="critfill" style={{ width: `${(b.awarded / b.max) * 100}%` }} /></div>
+                        {b.note && <div className="critnote">{b.note}</div>}
+                      </div>
+                    ))}
+                    {grade.comment && <div className="next" style={{ marginTop: 14 }}>{grade.comment}</div>}
+                    <div className="nav">
+                      <button className="btn ghost" onClick={() => { setGrade(null); }}>Переписать</button>
+                      <button className="btn amber" onClick={() => setLessonStage("done")}>Дальше</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {lessonStage === "done" && (() => {

@@ -22,3 +22,5 @@ export const sendFeedback = (id, verdict) => post("feedback", { id, verdict });
 export const joinWaitlist = (email, diagnosticId, intent) => post("waitlist", { email, diagnosticId, intent });
 export const getLesson = (index, calibration, niche, diagnosis) => post("lesson", { index, calibration, niche, diagnosis });
 export const getCourse = (calibration, niche, diagnosis) => post("course", { calibration, niche, diagnosis });
+export const gradeHomework = (axis, index, task, submission, calibration, niche) =>
+  post("grade", { axis, index, task, submission, calibration, niche });
