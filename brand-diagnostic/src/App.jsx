@@ -243,12 +243,10 @@ export default function App() {
   const [joined, setJoined] = useState(s.joined ?? false);
   const [intent, setIntent] = useState(s.intent ?? null);
   const [lessons, setLessons] = useState(s.lessons ?? {});
-  const [blocks, setBlocks] = useState(s.blocks ?? []);
-  const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 15);
+  const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 10);
   const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
   const lesson = lessons?.[lessonIndex] ?? null;
-  const PER_BLOCK = 5;
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
@@ -303,22 +301,7 @@ export default function App() {
     });
   }
 
-  // Курс грузится по блоку (5 уроков параллельно). Внутри блока листается мгновенно; смена блока — одна сборка.
-  function loadBlock(blockIdx, opts = {}) {
-    guard(async () => {
-      setPhase("building");
-      const res = await getCourse(blockIdx, calibration, niche, result);
-      const merged = { ...lessons };
-      for (const l of res.lessons) merged[l.index] = l;
-      setLessons(merged);
-      if (res.blocks) setBlocks(res.blocks);
-      if (res.total) setCourseTotal(res.total);
-      setLessonIndex(opts.goTo ?? blockIdx * PER_BLOCK);
-      setLessonStage("read");
-      setPhase("lesson");
-    });
-  }
-
+  // Весь курс собирается одним запросом; дальше уроки листаются мгновенно, без загрузки.
   function openCourse() {
     if (lessons?.[0]) {
       setLessonIndex(0);
@@ -326,17 +309,24 @@ export default function App() {
       setPhase("lesson");
       return;
     }
-    loadBlock(0);
+    guard(async () => {
+      setPhase("building");
+      const res = await getCourse(calibration, niche, result);
+      const byIndex = {};
+      for (const l of res.lessons) byIndex[l.index] = l;
+      setLessons(byIndex);
+      if (res.total) setCourseTotal(res.total);
+      setLessonIndex(0);
+      setLessonStage("read");
+      setPhase("lesson");
+    });
   }
 
   function goToLesson(index) {
-    if (lessons?.[index]) {
-      setLessonIndex(index);
-      setLessonStage("read");
-      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      loadBlock(Math.floor(index / PER_BLOCK), { goTo: index });
-    }
+    if (!lessons?.[index]) return;
+    setLessonIndex(index);
+    setLessonStage("read");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
@@ -344,10 +334,10 @@ export default function App() {
     if (phase === "intro") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-      result, diagnosticId, feedbackSent, email, joined, intent, lessons, blocks, courseTotal, lessonStage, lessonIndex,
+      result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
     });
   }, [phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
-    result, diagnosticId, feedbackSent, email, joined, intent, lessons, blocks, courseTotal, lessonStage, lessonIndex]);
+    result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex]);
 
   // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
   useEffect(() => {
@@ -366,15 +356,14 @@ export default function App() {
     } else if (saved.phase === "analyzing" && saved.decisions?.length) {
       assess(saved.links, saved.decisions);
     } else if (saved.phase === "building" && saved.result) {
-      const idx = saved.lessonIndex ?? 0;
-      loadBlock(Math.floor(idx / PER_BLOCK), { goTo: idx });
+      openCourse();
     }
   }, []);
 
   const reset = () => {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
-    setLessons({}); setBlocks([]); setCourseTotal(15); setLessonStage("read"); setLessonIndex(0);
+    setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -543,7 +532,7 @@ export default function App() {
                 <div>
                   <div className="eyebrow" style={{ color: "var(--violet)" }}>Есть курс под твою слепую зону</div>
                   <div className="cctatitle">{hook.course}</div>
-                  <div className="cctasub">15 уроков в 3 блока: что это, почему так у тебя, что делать. Первый — бесплатно, прямо сейчас.</div>
+                  <div className="cctasub">Уроки от основ к глубине, по одной идее за раз, с примерами и заданиями. Первый — бесплатно, прямо сейчас.</div>
                 </div>
                 <button className="btn amber cctabtn" onClick={openCourse}>Открыть курс →</button>
               </div>
@@ -695,9 +684,7 @@ export default function App() {
         {phase === "lesson" && lesson && (
           <div className="phase">
             <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / (courseTotal || lesson.total)) * 100}%` }} /></div>
-            <div className="qnum">
-              {lesson.blockTitle ? `${lesson.blockTitle} · ` : ""}урок {lesson.index + 1} из {courseTotal || lesson.total}
-            </div>
+            <div className="qnum">Урок {lesson.index + 1} из {courseTotal || lesson.total}</div>
             <h1 style={{ fontSize: "clamp(24px,4.6vw,34px)", margin: "10px 0 20px" }}>{lesson.title}</h1>
 
             {lessonStage === "read" && (
@@ -762,8 +749,6 @@ export default function App() {
             {lessonStage === "done" && (() => {
               const nextIdx = lesson.index + 1;
               const total = courseTotal || lesson.total;
-              const startsBlock = nextIdx % PER_BLOCK === 0;
-              const nextBlockTitle = blocks[Math.floor(nextIdx / PER_BLOCK)];
               return (
                 <div>
                   <div className="card">
@@ -773,9 +758,7 @@ export default function App() {
                   <div className="nav">
                     <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
                     {nextIdx < total ? (
-                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>
-                        {startsBlock && nextBlockTitle ? `Блок: ${nextBlockTitle}` : `Урок ${nextIdx + 1}`}
-                      </button>
+                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>Урок {nextIdx + 1}</button>
                     ) : (
                       <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
                     )}

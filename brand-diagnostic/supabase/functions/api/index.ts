@@ -13,7 +13,7 @@ import {
   runMethodist,
   type SeedAnswer,
 } from "./agents.ts";
-import { BLOCKS, COURSE_LENGTH, runBlock } from "./course.ts";
+import { courseLength, runCourse } from "./course.ts";
 import type { LlmUsage } from "./llm.ts";
 
 const CORS = {
@@ -119,18 +119,12 @@ async function diagnose(body: DiagnosePayload) {
   return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
 }
 
-async function course(body: { block?: number; calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
+async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
   if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
   const usage: LlmUsage[] = [];
-  const block = body.block ?? 0;
-  const lessons = await runBlock(block, body.diagnosis.weakness.axis, body.calibration, body.niche, body.diagnosis, usage);
-  return {
-    status: "ok",
-    block,
-    lessons,
-    total: COURSE_LENGTH,
-    blocks: BLOCKS.map((b) => b.title),
-  };
+  const axis = body.diagnosis.weakness.axis;
+  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage);
+  return { status: "ok", lessons, total: courseLength(axis) };
 }
 
 function normalizeDiagnosis(d: Diagnosis) {
