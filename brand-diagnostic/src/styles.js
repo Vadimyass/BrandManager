@@ -114,6 +114,11 @@ export const CSS = `
 .bd .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:bdspin 1s linear infinite}
 @keyframes bdspin{to{transform:rotate(360deg)}}
 .bd .center{display:flex;flex-direction:column;align-items:center;gap:18px;padding:60px 0;text-align:center}
+.bd .sharecard{margin-top:18px;padding:18px 20px;border-radius:18px;background:var(--ink);color:var(--bone);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.bd .sharecard .cctatitle{color:var(--bone)}
+.bd .sharecard .cctasub{color:var(--muted-d)}
+.bd .sharecard .btn{background:var(--amber);color:#3a2607}
+@media(max-width:520px){.bd .sharecard{flex-direction:column;align-items:stretch}.bd .sharecard .cctabtn{width:100%}}
 .bd .coursecta{margin-top:20px;padding:20px 22px;border-radius:20px;background:linear-gradient(120deg,rgba(90,84,201,.1),rgba(232,161,58,.12));border:1px solid rgba(90,84,201,.25);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;animation:fadeUp .5s .15s both}
 .bd .cctatitle{font-family:var(--disp);font-weight:700;font-size:clamp(19px,3.6vw,24px);letter-spacing:-.01em;margin-top:4px}
 .bd .cctasub{font-size:14px;color:var(--muted);line-height:1.5;margin-top:6px;max-width:44ch}

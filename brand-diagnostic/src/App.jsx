@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
+import { setTrackNiche, track } from "./analytics.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -249,9 +250,12 @@ export default function App() {
   const [submission, setSubmission] = useState("");
   const [grade, setGrade] = useState(null);
   const [grading, setGrading] = useState(false);
+  const [shared, setShared] = useState(false);
   const lesson = lessons?.[lessonIndex] ?? null;
   const lastAction = useRef(null);
   const resumed = useRef(false);
+
+  useEffect(() => { track("landed"); }, []);
 
   async function guard(fn) {
     lastAction.current = fn;
@@ -267,6 +271,7 @@ export default function App() {
   function onSeedDone(res) {
     const seed = res.map((r) => ({ id: r.id, q: r.q, answer: r.answer }));
     setSeedAnswers(seed);
+    track("seed_done");
     guard(async () => {
       setPhase("prep");
       const data = await getDeck(seed, name, niche);
@@ -291,6 +296,7 @@ export default function App() {
       };
     });
     setDecisions(ds);
+    track("tradeoffs_done");
     setPhase("links");
   }
 
@@ -300,12 +306,14 @@ export default function App() {
       const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage });
       setResult(res.result);
       setDiagnosticId(res.id);
+      track("diagnosis_shown", { weakness: res.result?.weakness?.axis });
       setPhase("result");
     });
   }
 
   // Весь курс собирается одним запросом; дальше уроки листаются мгновенно, без загрузки.
   function openCourse() {
+    track("course_opened");
     if (lessons?.[0]) {
       setLessonIndex(0);
       setLessonStage("read");
@@ -381,13 +389,14 @@ export default function App() {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
-    setSubmission(""); setGrade(null); setGrading(false);
+    setSubmission(""); setGrade(null); setGrading(false); setShared(false);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
 
   async function giveFeedback(verdict) {
     setFeedbackSent(verdict);
+    track("feedback", { verdict });
     try { await sendFeedback(diagnosticId, verdict); } catch { /* не блокируем UI */ }
   }
 
@@ -395,9 +404,27 @@ export default function App() {
     try {
       await joinWaitlist(email, diagnosticId, intent);
       setJoined(true);
+      track("email_captured", { intent });
     } catch (e) {
       setError(String(e?.message ?? e));
     }
+  }
+
+  async function shareResult() {
+    track("share_clicked", { weakness: result?.weakness?.axis });
+    const label = AXIS_LABELS[result?.weakness?.axis] ?? "";
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const text = `Прошёл бизнес-диагностику: моя слепая зона — ${label}. А твоя? ${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Моя бизнес-диагностика", text, url });
+        track("share_done", { via: "native" });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShared(true);
+        track("share_done", { via: "clipboard" });
+      }
+    } catch { /* пользователь отменил — не ошибка */ }
   }
 
   const weakLabel = result ? (AXIS_LABELS[result.weakness?.axis] ?? "") : "";
@@ -435,7 +462,7 @@ export default function App() {
             </div>
             <div className="nav">
               <button className="btn ghost" onClick={() => setPhase("intro")}>Назад</button>
-              <button className="btn" disabled={!niche} onClick={() => setPhase("seed")}>Дальше</button>
+              <button className="btn" disabled={!niche} onClick={() => { setTrackNiche(niche); track("niche_picked", { niche }); setPhase("seed"); }}>Дальше</button>
             </div>
           </div>
         )}
@@ -556,6 +583,14 @@ export default function App() {
               </div>
             )}
 
+            <div className="sharecard">
+              <div>
+                <div className="cctatitle" style={{ fontSize: 20 }}>Моя слепая зона — {weakLabel}. А твоя?</div>
+                <div className="cctasub">Скинь друзьям-фаундерам — сравните.</div>
+              </div>
+              <button className="btn cctabtn" onClick={shareResult}>{shared ? "Скопировано ✓" : "Поделиться"}</button>
+            </div>
+
             <div className="fbrow">
               <span className="fbq">Диагноз попал?</span>
               {feedbackSent ? (
@@ -570,7 +605,7 @@ export default function App() {
 
             <div className="nav">
               <button className="btn ghost" onClick={reset}>Пройти заново</button>
-              <button className="btn" onClick={() => setPhase("offer")}>Что в курсе</button>
+              <button className="btn" onClick={() => { track("offer_viewed"); setPhase("offer"); }}>Что в курсе</button>
             </div>
             <div className="foot">Бета · колода и диагноз сгенерированы под твою нишу</div>
           </div>
@@ -648,7 +683,7 @@ export default function App() {
                   <div className="ptag">Купить сейчас</div>
                   <div className="pprice">{COURSE_PRICE}</div>
                   <div className="pnote">Доступ навсегда, все пять уроков и личный план.</div>
-                  <button className="btn amber" style={{ width: "100%" }} onClick={() => setIntent("purchase")}>Оплатить</button>
+                  <button className="btn amber" style={{ width: "100%" }} onClick={() => { setIntent("purchase"); track("buy_clicked"); }}>Оплатить</button>
                 </div>
                 <div className={"path" + (intent === "plan" ? " on" : "")}>
                   <div className="ptag">Пока подождать</div>

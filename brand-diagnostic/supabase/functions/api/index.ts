@@ -51,6 +51,8 @@ Deno.serve(async (req) => {
         return json(await course(body));
       case "grade":
         return json(await grade(body));
+      case "track":
+        return json(await track(body));
       case "feedback":
         return json(await feedback(body));
       case "waitlist":
@@ -128,6 +130,20 @@ async function course(body: { calibration: Calibration; niche?: string; diagnosi
   const axis = body.diagnosis.weakness.axis;
   const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage);
   return { status: "ok", lessons, total: courseLength(axis) };
+}
+
+async function track(body: { sessionId: string; name: string; props?: unknown; niche?: string; referrer?: string }) {
+  if (!body.sessionId || !body.name) return { status: "skip" };
+  // Аналитику не даём валить основной поток — ошибки глотаем.
+  const { error } = await db.from("events").insert({
+    session_id: String(body.sessionId).slice(0, 64),
+    name: String(body.name).slice(0, 64),
+    props: body.props ?? null,
+    niche: body.niche ? String(body.niche).slice(0, 80) : null,
+    referrer: body.referrer ? String(body.referrer).slice(0, 300) : null,
+  });
+  if (error) console.error("track error:", error.message);
+  return { status: "ok" };
 }
 
 async function grade(body: { axis: string; index: number; task: string; submission: string; calibration: Calibration; niche?: string }) {
