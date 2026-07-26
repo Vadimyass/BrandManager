@@ -9,6 +9,10 @@ export const CSS = `
 .bd .blob.b{width:460px;height:460px;background:rgba(232,161,58,.12);bottom:-140px;left:-120px;animation:drift 26s ease-in-out infinite alternate-reverse}
 @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,40px) scale(1.12)}}
 .bd .wrap{max-width:720px;margin:0 auto;position:relative;z-index:1}
+.bd .topbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
+.bd .tbtn{font-family:var(--body);font-size:13px;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:all .15s}
+.bd .tbtn:hover{border-color:var(--ink)}
+.bd .tbtn.ghost{background:transparent;color:var(--muted)}
 .bd .phase{animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .bd .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}

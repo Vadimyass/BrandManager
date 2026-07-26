@@ -3,6 +3,7 @@ import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js"
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
 import { setTrackNiche, track } from "./analytics.js";
+import { loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -252,10 +253,34 @@ export default function App() {
   const [grading, setGrading] = useState(false);
   const [shared, setShared] = useState(false);
   const lesson = lessons?.[lessonIndex] ?? null;
+  const [user, setUser] = useState(null);
+  const [progress, setProgress] = useState(null);
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
   useEffect(() => { track("landed"); }, []);
+
+  // Авторизация: подхватываем сессию и слушаем вход/выход.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) loadProgress(user.id).then((p) => p && setProgress(p));
+    else setProgress(null);
+  }, [user]);
+
+  // Сохраняем прогресс только для залогиненных: сливаем патч в общий снимок.
+  function persist(patch) {
+    if (!user) return;
+    setProgress((prev) => {
+      const next = { ...(prev || {}), ...patch, updatedAt: new Date().toISOString() };
+      saveProgress(user.id, next);
+      return next;
+    });
+  }
 
   // Докуда дошёл в курсе: каждое открытие урока — событие с номером и всего.
   useEffect(() => {
@@ -263,6 +288,7 @@ export default function App() {
       const total = courseTotal || lessons[lessonIndex].total;
       track("lesson_viewed", { index: lessonIndex, human: lessonIndex + 1, total });
       if (lessonIndex + 1 >= total) track("course_completed", { total });
+      persist({ courseAxis: result?.weakness?.axis, total, maxLesson: Math.max(progress?.maxLesson ?? 0, lessonIndex + 1) });
     }
   }, [phase, lessonIndex]);
 
@@ -316,6 +342,13 @@ export default function App() {
       setResult(res.result);
       setDiagnosticId(res.id);
       track("diagnosis_shown", { weakness: res.result?.weakness?.axis });
+      persist({
+        weaknessAxis: res.result?.weakness?.axis,
+        weaknessLabel: AXIS_LABELS[res.result?.weakness?.axis] ?? "",
+        superLabel: AXIS_LABELS[res.result?.superpower?.axis] ?? "",
+        diagnosisAt: new Date().toISOString(),
+        maxLesson: 0, homework: {},
+      });
       setPhase("result");
     });
   }
@@ -357,6 +390,7 @@ export default function App() {
       const res = await gradeHomework(result.weakness.axis, lesson.index, lesson.task, submission, calibration, niche);
       setGrade(res);
       track("homework_graded", { index: lesson.index, score: res?.total });
+      persist({ homework: { ...(progress?.homework || {}), [lesson.index]: res?.total } });
     } catch (e) {
       setGrade({ error: String(e?.message ?? e) });
     } finally {
@@ -446,6 +480,69 @@ export default function App() {
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
       <div className="wrap">
+
+        <div className="topbar">
+          {user ? (
+            <>
+              <button className="tbtn" onClick={() => setPhase("cabinet")}>Кабинет</button>
+              <button className="tbtn ghost" onClick={() => signOut()}>Выйти</button>
+            </>
+          ) : (
+            <button className="tbtn" onClick={() => signInWithGoogle()}>Войти через Google</button>
+          )}
+        </div>
+
+        {phase === "cabinet" && (
+          <div className="phase">
+            <div className="eyebrow">Личный кабинет</div>
+            <h1 style={{ fontSize: "clamp(26px,5vw,38px)" }}>Привет{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(" ")[0]}` : ""}</h1>
+            {!progress?.weaknessAxis ? (
+              <>
+                <p className="lede">Ты ещё не проходил диагностику. Пройди — и тут появится твой прогресс.</p>
+                <button className="btn amber" onClick={() => setPhase("intro")}>Пройти диагностику</button>
+              </>
+            ) : (
+              <>
+                <div className="card" style={{ marginTop: 8 }}>
+                  <div className="eyebrow">Твой последний диагноз</div>
+                  <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>Слепая зона: {progress.weaknessLabel}</div>
+                  {progress.superLabel && <div className="summary">Суперсила: {progress.superLabel}</div>}
+                </div>
+
+                <div className="block">
+                  <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--violet)" }}>Курс</h3>
+                  {progress.total ? (
+                    <>
+                      <div className="bar" style={{ marginTop: 4 }}><div className="fill" style={{ width: `${Math.min(100, ((progress.maxLesson || 0) / progress.total) * 100)}%` }} /></div>
+                      <div className="hint" style={{ marginTop: 8 }}>Пройдено {progress.maxLesson || 0} из {progress.total} уроков</div>
+                    </>
+                  ) : (
+                    <div className="hint">Курс ещё не начат.</div>
+                  )}
+                </div>
+
+                {progress.homework && Object.keys(progress.homework).length > 0 && (
+                  <div className="block">
+                    <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--amber)" }}>Домашки</h3>
+                    {Object.entries(progress.homework).sort((a, b) => a[0] - b[0]).map(([idx, sc]) => (
+                      <div className="planrow" key={idx} style={{ background: "transparent", color: "var(--ink)", borderColor: "var(--line)" }}>
+                        <span className="pnum" style={{ color: "var(--violet)" }}>Урок {Number(idx) + 1}</span>
+                        <span>{sc} / 10</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="nav">
+                  <button className="btn ghost" onClick={() => setPhase("intro")}>Новая диагностика</button>
+                  {result && Object.keys(lessons).length > 0 && (
+                    <button className="btn amber" onClick={() => { setLessonIndex(Math.min(progress.maxLesson || 0, (courseTotal || 1) - 1)); setLessonStage("read"); setPhase("lesson"); }}>Продолжить курс</button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {phase === "intro" && (
           <div className="phase">
