@@ -257,6 +257,15 @@ export default function App() {
 
   useEffect(() => { track("landed"); }, []);
 
+  // Докуда дошёл в курсе: каждое открытие урока — событие с номером и всего.
+  useEffect(() => {
+    if (phase === "lesson" && lessons?.[lessonIndex]) {
+      const total = courseTotal || lessons[lessonIndex].total;
+      track("lesson_viewed", { index: lessonIndex, human: lessonIndex + 1, total });
+      if (lessonIndex + 1 >= total) track("course_completed", { total });
+    }
+  }, [phase, lessonIndex]);
+
   async function guard(fn) {
     lastAction.current = fn;
     setError("");
@@ -347,6 +356,7 @@ export default function App() {
     try {
       const res = await gradeHomework(result.weakness.axis, lesson.index, lesson.task, submission, calibration, niche);
       setGrade(res);
+      track("homework_graded", { index: lesson.index, score: res?.total });
     } catch (e) {
       setGrade({ error: String(e?.message ?? e) });
     } finally {

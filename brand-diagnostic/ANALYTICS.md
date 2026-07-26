@@ -16,7 +16,28 @@
 | `email_captured` | оставил почту (props.intent: plan/purchase) |
 | `offer_viewed` | открыл «Что в курсе» |
 | `course_opened` | открыл курс |
+| `lesson_viewed` | открыл урок (props.human = номер, props.total) |
+| `homework_graded` | сдал домашку (props.index, props.score) |
+| `course_completed` | дошёл до последнего урока |
 | `buy_clicked` | нажал «Оплатить» |
+
+## Открыли ли курс и докуда дошли (главное для взвешивания фидбека)
+
+```sql
+-- Сколько человек открыли курс и как глубоко зашли
+select
+  count(distinct session_id) filter (where name='course_opened') as открыли_курс,
+  count(distinct session_id) filter (where name='lesson_viewed') as начали_урок,
+  count(distinct session_id) filter (where name='course_completed') as прошли_до_конца,
+  count(distinct session_id) filter (where name='homework_graded') as сдали_домашку;
+
+-- Докуда дошёл КАЖДЫЙ (максимальный номер урока по сессии)
+select session_id, max((props->>'human')::int) as дошёл_до_урока, max((props->>'total')::int) as всего
+from events where name='lesson_viewed'
+group by session_id order by дошёл_до_урока desc;
+```
+
+Читать так: если человек дал фидбек, но `дошёл_до_урока` = 1 — его мнение про курс поверхностное (глянул и закрыл). Если 6–8 из 8 — это глубокий, весомый фидбек.
 
 ## Главный вопрос теста (гейт Go/No-Go)
 
