@@ -3,7 +3,7 @@ import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js"
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
 import { setTrackNiche, track } from "./analytics.js";
-import { loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
+import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
@@ -263,6 +263,8 @@ export default function App() {
 
   // Авторизация: подхватываем сессию и слушаем вход/выход.
   useEffect(() => {
+    const err = authErrorFromUrl();
+    if (err) { setError(`Вход не удался: ${err}`); setPhase("error"); }
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
     return () => sub.subscription.unsubscribe();
