@@ -82,6 +82,7 @@ async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: st
 interface DiagnosePayload {
   name?: string;
   niche?: string;
+  version?: string;
   seedAnswers: SeedAnswer[];
   calibration: Calibration;
   decisions: Decision[];
@@ -111,7 +112,7 @@ async function diagnose(body: DiagnosePayload) {
   const { data, error } = await db
     .from("diagnostics")
     .insert({
-      input: { name: body.name, niche: body.niche, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
+      input: { name: body.name, niche: body.niche, version: body.version, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
       result: { ...diagnosis, sprints },
       validator: { ...validation, retried },
       usage,

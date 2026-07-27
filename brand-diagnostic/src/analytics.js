@@ -1,3 +1,5 @@
+import { APP_VERSION } from "./version.js";
+
 const BASE = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -25,7 +27,7 @@ export function track(name, props) {
     const body = JSON.stringify({
       sessionId: sessionId(),
       name,
-      props: props ?? null,
+      props: { ...(props ?? {}), v: APP_VERSION },
       niche,
       referrer: document.referrer || null,
     });

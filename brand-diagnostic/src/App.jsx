@@ -4,6 +4,7 @@ import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
 import { setTrackNiche, track } from "./analytics.js";
 import { loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
+import { APP_VERSION } from "./version.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -343,7 +344,7 @@ export default function App() {
   function assess(finalLinks = links, ds = decisions) {
     guard(async () => {
       setPhase("analyzing");
-      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage });
+      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage, version: APP_VERSION });
       setResult(res.result);
       setDiagnosticId(res.id);
       track("diagnosis_shown", { weakness: res.result?.weakness?.axis });
@@ -1031,6 +1032,7 @@ export default function App() {
           </div>
         )}
 
+        <div className="verstamp">v{APP_VERSION}</div>
       </div>
     </div>
   );
