@@ -256,6 +256,7 @@ export default function App() {
   const lesson = lessons?.[lessonIndex] ?? null;
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [prevPhase, setPrevPhase] = useState("welcome");
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
@@ -493,7 +494,7 @@ export default function App() {
           <div className="topbar">
             {user ? (
               <>
-                <button className="tbtn" onClick={() => setPhase("cabinet")}>Кабинет</button>
+                <button className="tbtn" onClick={() => { setPrevPhase(phase); setPhase("cabinet"); }}>Кабинет</button>
                 <button className="tbtn ghost" onClick={() => signOut()}>Выйти</button>
               </>
             ) : (
@@ -536,6 +537,7 @@ export default function App() {
 
         {phase === "cabinet" && (
           <div className="phase">
+            <button className="btn ghost" style={{ marginBottom: 14 }} onClick={() => setPhase(prevPhase && prevPhase !== "cabinet" ? prevPhase : (result ? "result" : "welcome"))}>← Назад</button>
             <div className="eyebrow">Личный кабинет</div>
             <h1 style={{ fontSize: "clamp(26px,5vw,38px)" }}>Привет{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(" ")[0]}` : ""}</h1>
             {!progress?.weaknessAxis ? (
