@@ -123,6 +123,22 @@ export const CSS = `
 .bd .sharecard .cctasub{color:var(--muted-d)}
 .bd .sharecard .btn{background:var(--amber);color:#3a2607}
 @media(max-width:520px){.bd .sharecard{flex-direction:column;align-items:stretch}.bd .sharecard .cctabtn{width:100%}}
+.bd .welcome h1{margin-top:18px}
+.bd .wcards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:26px 0 6px}
+.bd .wcard{padding:22px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.9);display:flex;flex-direction:column;gap:10px;transition:all .2s cubic-bezier(.2,.8,.2,1)}
+.bd .wcard:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(22,23,43,.1)}
+.bd .wcard.on{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,161,58,.16)}
+.bd .wtag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--violet)}
+.bd .wtitle{font-family:var(--disp);font-weight:600;font-size:20px;letter-spacing:-.01em}
+.bd .wlist{list-style:none;padding:0;margin:2px 0 14px;display:flex;flex-direction:column;gap:7px;flex:1}
+.bd .wlist li{font-size:14px;line-height:1.45;color:var(--muted);padding-left:20px;position:relative}
+.bd .wlist li:before{content:"→";position:absolute;left:0;color:var(--amber);font-family:var(--mono)}
+@media(max-width:560px){.bd .wcards{grid-template-columns:1fr}}
+.bd .loginnudge{margin-top:18px;padding:18px 20px;border-radius:18px;background:linear-gradient(120deg,rgba(90,84,201,.12),rgba(232,161,58,.14));border:1px solid rgba(90,84,201,.28);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;animation:fadeUp .5s .1s both}
+.bd .lntitle{font-family:var(--disp);font-weight:600;font-size:18px;letter-spacing:-.01em}
+.bd .lnsub{font-size:14px;color:var(--muted);line-height:1.5;margin-top:5px;max-width:46ch}
+.bd .lnbtn{white-space:nowrap}
+@media(max-width:520px){.bd .loginnudge{flex-direction:column;align-items:stretch}.bd .lnbtn{width:100%}}
 .bd .coursecta{margin-top:20px;padding:20px 22px;border-radius:20px;background:linear-gradient(120deg,rgba(90,84,201,.1),rgba(232,161,58,.12));border:1px solid rgba(90,84,201,.25);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;animation:fadeUp .5s .15s both}
 .bd .cctatitle{font-family:var(--disp);font-weight:700;font-size:clamp(19px,3.6vw,24px);letter-spacing:-.01em;margin-top:4px}
 .bd .cctasub{font-size:14px;color:var(--muted);line-height:1.5;margin-top:6px;max-width:44ch}

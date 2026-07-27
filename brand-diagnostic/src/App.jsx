@@ -228,7 +228,7 @@ export default function App() {
   const saved = useRef(loadSession()).current;
   const s = saved ?? {};
 
-  const [phase, setPhase] = useState(s.phase ?? "intro");
+  const [phase, setPhase] = useState(s.phase ?? "welcome");
   const [name, setName] = useState(s.name ?? "");
   const [niche, setNiche] = useState(s.niche ?? "");
   const [seedAnswers, setSeedAnswers] = useState(s.seedAnswers ?? []);
@@ -271,6 +271,11 @@ export default function App() {
     if (user) loadProgress(user.id).then((p) => p && setProgress(p));
     else setProgress(null);
   }, [user]);
+
+  // Залогинился на велком-экране — сразу веду дальше, а не оставляю на воротах.
+  useEffect(() => {
+    if (user && phase === "welcome") setPhase("intro");
+  }, [user, phase]);
 
   // Сохраняем прогресс только для залогиненных: сливаем патч в общий снимок.
   function persist(patch) {
@@ -400,7 +405,7 @@ export default function App() {
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
   useEffect(() => {
-    if (phase === "intro") return;
+    if (phase === "intro" || phase === "welcome") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
       result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
@@ -481,16 +486,50 @@ export default function App() {
       <div className="blob a" /><div className="blob b" />
       <div className="wrap">
 
-        <div className="topbar">
-          {user ? (
-            <>
-              <button className="tbtn" onClick={() => setPhase("cabinet")}>Кабинет</button>
-              <button className="tbtn ghost" onClick={() => signOut()}>Выйти</button>
-            </>
-          ) : (
-            <button className="tbtn" onClick={() => signInWithGoogle()}>Войти через Google</button>
-          )}
-        </div>
+        {phase !== "welcome" && (
+          <div className="topbar">
+            {user ? (
+              <>
+                <button className="tbtn" onClick={() => setPhase("cabinet")}>Кабинет</button>
+                <button className="tbtn ghost" onClick={() => signOut()}>Выйти</button>
+              </>
+            ) : (
+              <button className="tbtn" onClick={() => signInWithGoogle()}>Войти</button>
+            )}
+          </div>
+        )}
+
+        {phase === "welcome" && (
+          <div className="phase welcome">
+            <div className="eyebrow">Бизнес-диагностика</div>
+            <h1>Узнай, чем жертвуешь зря в своём деле — за 10 свайпов</h1>
+            <p className="lede">AI-разбор твоих бизнес-решений: где твоя сила, где слепая зона и что с ней делать.</p>
+
+            <div className="wcards">
+              <div className="wcard on">
+                <div className="wtag">Рекомендуем</div>
+                <div className="wtitle">Войти через Google</div>
+                <ul className="wlist">
+                  <li>Диагноз и прогресс курса сохранятся</li>
+                  <li>Персональный план всегда под рукой</li>
+                  <li>Продолжишь с любого устройства</li>
+                </ul>
+                <button className="btn amber" style={{ width: "100%" }} onClick={() => { track("login_clicked", { from: "welcome" }); signInWithGoogle(); }}>Продолжить с Google</button>
+              </div>
+              <div className="wcard">
+                <div className="wtag">Без регистрации</div>
+                <div className="wtitle">Пройти как гость</div>
+                <ul className="wlist">
+                  <li>Начнёшь прямо сейчас</li>
+                  <li>Пройдёшь диагностику и откроешь курс</li>
+                  <li>Прогресс не сохранится</li>
+                </ul>
+                <button className="btn ghost" style={{ width: "100%" }} onClick={() => { track("guest_chosen"); setPhase("intro"); }}>Продолжить гостем</button>
+              </div>
+            </div>
+            <div className="foot">Бета · вход только для сохранения прогресса</div>
+          </div>
+        )}
 
         {phase === "cabinet" && (
           <div className="phase">
@@ -678,6 +717,16 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {!user && (
+              <div className="loginnudge">
+                <div>
+                  <div className="lntitle">Сохранить твой результат?</div>
+                  <div className="lnsub">Войди через Google — диагноз, план и прогресс курса не потеряются, вернёшься с любого устройства.</div>
+                </div>
+                <button className="btn amber lnbtn" onClick={() => { track("login_clicked", { from: "result" }); signInWithGoogle(); }}>Сохранить с Google</button>
+              </div>
+            )}
 
             {hook && (
               <div className="coursecta">
