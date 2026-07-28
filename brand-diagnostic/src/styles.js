@@ -4,6 +4,12 @@ export const CSS = `
   --disp:'Space Grotesk',system-ui,sans-serif;--body:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
   font-family:var(--body);color:var(--ink);background:var(--paper);min-height:100vh;width:100%;box-sizing:border-box;padding:clamp(20px,5vw,56px);position:relative;overflow-x:hidden}
 .bd *{box-sizing:border-box}
+/* Текст никогда не вылезает за границы, в т.ч. длинные слова/ссылки на телефоне */
+.bd{overflow-x:hidden}
+.bd p,.bd div,.bd span,.bd li,.bd h1,.bd h2,.bd h3,.bd button{overflow-wrap:anywhere;word-break:break-word;min-width:0}
+.bd .row,.bd .nav,.bd .deckbtns,.bd .share,.bd .fbrow,.bd .coursecta,.bd .loginnudge,.bd .sharecard,.bd .pricecard,.bd .wcards,.bd .paths{min-width:0}
+.bd .coursecta>div,.bd .loginnudge>div,.bd .sharecard>div,.bd .pricecard>div{min-width:0;flex:1}
+.bd svg{max-width:100%;height:auto;display:block}
 .bd .blob{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0}
 .bd .blob.a{width:520px;height:520px;background:rgba(90,84,201,.14);top:-160px;right:-120px;animation:drift 22s ease-in-out infinite alternate}
 .bd .blob.b{width:460px;height:460px;background:rgba(232,161,58,.12);bottom:-140px;left:-120px;animation:drift 26s ease-in-out infinite alternate-reverse}
