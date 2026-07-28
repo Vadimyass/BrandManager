@@ -5,6 +5,7 @@ import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./sessio
 import { setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
+import { ARTICLES, articleBySlug } from "./articles.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
 import { CSS } from "./styles.js";
 
@@ -257,10 +258,31 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState(null);
   const [prevPhase, setPrevPhase] = useState("welcome");
+  const [articleSlug, setArticleSlug] = useState(null);
   const lastAction = useRef(null);
   const resumed = useRef(false);
 
   useEffect(() => { track("landed"); }, []);
+
+  // Шаро-ссылка на статью: .../#article=<slug> открывает её напрямую.
+  useEffect(() => {
+    const m = window.location.hash.match(/article=([a-z0-9-]+)/i);
+    if (m && articleBySlug(m[1])) { setArticleSlug(m[1]); setPhase("article"); }
+  }, []);
+
+  function openArticle(slug) {
+    setArticleSlug(slug);
+    try { history.replaceState(null, "", `#article=${slug}`); } catch { /* ignore */ }
+    setPhase("article");
+    track("article_opened", { slug });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeArticle() {
+    try { history.replaceState(null, "", window.location.pathname); } catch { /* ignore */ }
+    setArticleSlug(null);
+    setPhase("welcome");
+  }
 
   // Авторизация: подхватываем сессию и слушаем вход/выход.
   useEffect(() => {
@@ -409,7 +431,7 @@ export default function App() {
 
   // Снимок сессии: вкладку могут выгрузить в фоне, особенно на телефоне.
   useEffect(() => {
-    if (phase === "intro" || phase === "welcome") return;
+    if (phase === "intro" || phase === "welcome" || phase === "article") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
       result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
@@ -531,9 +553,57 @@ export default function App() {
                 <button className="btn ghost" style={{ width: "100%" }} onClick={() => { track("guest_chosen"); setPhase("intro"); }}>Продолжить гостем</button>
               </div>
             </div>
+            <div className="artblock">
+              <div className="eyebrow" style={{ color: "var(--violet)" }}>Бесплатные статьи по брендингу</div>
+              <div className="artlist">
+                {ARTICLES.map((a) => (
+                  <button className="artitem" key={a.slug} onClick={() => openArticle(a.slug)}>
+                    <span className="artititle">{a.title}</span>
+                    <span className="artidesc">{a.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="foot">Бета · вход только для сохранения прогресса</div>
           </div>
         )}
+
+        {phase === "article" && articleBySlug(articleSlug) && (() => {
+          const a = articleBySlug(articleSlug);
+          return (
+            <div className="phase article">
+              <button className="btn ghost" style={{ marginBottom: 14 }} onClick={closeArticle}>← Все статьи</button>
+              <div className="eyebrow">Статья · брендинг</div>
+              <h1 style={{ fontSize: "clamp(26px,5.2vw,40px)" }}>{a.title}</h1>
+              <p className="lede">{a.description}</p>
+              <div className="artbody">
+                {a.blocks.map((b, i) => {
+                  if (b.h) return <h3 className="arth" key={i}>{b.h}</h3>;
+                  if (b.list) return <ul className="artul" key={i}>{b.list.map((x, j) => <li key={j}>{x}</li>)}</ul>;
+                  return <p key={i}>{b.p}</p>;
+                })}
+              </div>
+              <div className="coursecta" style={{ marginTop: 26 }}>
+                <div>
+                  <div className="cctatitle" style={{ fontSize: 20 }}>А какая слепая зона у твоего бизнеса?</div>
+                  <div className="cctasub">Проверь за 10 свайпов — AI-разбор твоих решений.</div>
+                </div>
+                <button className="btn amber cctabtn" onClick={() => { closeArticle(); setPhase("niche"); track("cta_from_article", { slug: a.slug }); }}>Пройти диагностику →</button>
+              </div>
+              <div className="artnext">
+                <div className="eyebrow" style={{ color: "var(--violet)" }}>Ещё статьи</div>
+                <div className="artlist">
+                  {ARTICLES.filter((x) => x.slug !== a.slug).slice(0, 3).map((x) => (
+                    <button className="artitem" key={x.slug} onClick={() => openArticle(x.slug)}>
+                      <span className="artititle">{x.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {phase === "cabinet" && (
           <div className="phase">

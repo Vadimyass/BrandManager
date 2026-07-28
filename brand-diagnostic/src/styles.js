@@ -15,6 +15,18 @@ export const CSS = `
 .bd .blob.b{width:460px;height:460px;background:rgba(232,161,58,.12);bottom:-140px;left:-120px;animation:drift 26s ease-in-out infinite alternate-reverse}
 @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,40px) scale(1.12)}}
 .bd .wrap{max-width:720px;margin:0 auto;position:relative;z-index:1}
+.bd .artblock{margin-top:32px}
+.bd .artlist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.bd .artitem{text-align:left;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.85);cursor:pointer;display:flex;flex-direction:column;gap:5px;transition:all .15s cubic-bezier(.2,.8,.2,1)}
+.bd .artitem:hover{transform:translateY(-2px);border-color:var(--violet);box-shadow:0 10px 24px rgba(22,23,43,.08)}
+.bd .artititle{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:-.01em;color:var(--ink)}
+.bd .artidesc{font-size:13.5px;color:var(--muted);line-height:1.45}
+.bd .artbody{margin-top:8px}
+.bd .artbody p{font-size:16.5px;line-height:1.7;margin:0 0 15px;color:var(--ink)}
+.bd .arth{font-family:var(--disp);font-weight:600;font-size:clamp(19px,3.6vw,23px);letter-spacing:-.01em;margin:24px 0 10px}
+.bd .artul{margin:0 0 15px;padding-left:20px}
+.bd .artul li{font-size:16.5px;line-height:1.6;margin-bottom:8px}
+.bd .artnext{margin-top:30px}
 .bd .verstamp{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted);opacity:.55;margin:38px 0 4px}
 .bd .topbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
 .bd .tbtn{font-family:var(--body);font-size:13px;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:all .15s}
