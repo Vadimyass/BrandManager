@@ -1,4 +1,5 @@
-export const COURSE_PRICE = "$5";
+// Украинский рынок: цена в гривнах (≈ $5). Экономика в ECONOMICS.md считается от ~$5.
+export const COURSE_PRICE = "199 ₴";
 
 // Универсальный банк крючков по слепой зоне — используется, если под нишу истории нет.
 export const STORY_HOOKS = {

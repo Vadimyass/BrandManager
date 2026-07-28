@@ -95,7 +95,8 @@ export function courseLength(axis: string): number {
   return planFor(axis).length;
 }
 
-const PLAIN_LANGUAGE_RULE = `ЯЗЫК: простые слова, как для друга без бизнес-образования. ЗАПРЕЩЕНЫ аббревиатуры и жаргон: MRR, LTV, CAC, churn, retention, burn rate, UX, лиды, performance, юнит-экономика. Вместо них человеческие слова.`;
+const PLAIN_LANGUAGE_RULE = `ЯЗЫК: простые слова, как для друга без бизнес-образования. ЗАПРЕЩЕНЫ аббревиатуры и жаргон: MRR, LTV, CAC, churn, retention, burn rate, UX, лиды, performance, юнит-экономика. Вместо них человеческие слова.
+ДЕНЬГИ: аудитория — украинский рынок. Суммы в долларах ($) или гривнах (₴), НИКОГДА в рублях; без российских реалий.`;
 
 const DEPTH_RULES: Record<Depth, string> = {
   intro: `Это вводный урок — самый простой. Для человека, который никогда не думал о теме.
