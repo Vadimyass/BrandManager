@@ -37,6 +37,24 @@ export const CSS = `
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .bd .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
 .bd .brandmark{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:-.02em;color:var(--amber)}
+/* Экраны в стиле мокапа Melyo: центрированные, маскот, плитки */
+.bd .screen{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:440px;margin:0 auto}
+.bd .dots5{display:flex;gap:6px;width:100%;max-width:300px;margin:6px 0 22px}
+.bd .d5{height:4px;flex:1;border-radius:4px;background:var(--line)}
+.bd .d5.on{background:var(--amber)}
+.bd .mascot{filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));margin-bottom:6px}
+.bd .stepnum{font-size:12px;color:var(--muted-d);margin:8px 0 6px}
+.bd .scr-h{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:-.01em;color:var(--ink);margin:0 0 22px}
+.bd .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-bottom:22px}
+.bd .tile{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);cursor:pointer;text-align:left;transition:all .16s cubic-bezier(.2,.8,.2,1)}
+.bd .tile:hover{border-color:var(--muted);transform:translateY(-2px)}
+.bd .tile.on{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber),0 0 24px rgba(145,132,217,.18)}
+.bd .tilelabel{font-size:14px;line-height:1.35;font-weight:500}
+.bd .btnp{width:100%;font-family:var(--body);font-weight:500;font-size:15px;padding:14px;border-radius:12px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;transition:all .16s}
+.bd .btnp:hover:not(:disabled){background:rgba(145,132,217,.12)}
+.bd .btnp:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line);color:var(--muted)}
+.bd .btnlink{background:none;border:none;color:var(--muted);font-family:var(--body);font-size:14px;padding:12px;cursor:pointer;margin-top:4px}
+.bd .btnlink:hover{color:var(--ink)}
 .bd h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,6vw,46px);line-height:1.04;letter-spacing:-.02em;margin:16px 0 14px}
 .bd .lede{font-size:17px;line-height:1.6;color:var(--muted);max-width:52ch}
 .bd .btn{font-family:var(--body);font-weight:500;font-size:15px;padding:13px 24px;border-radius:999px;border:none;cursor:pointer;background:var(--surface2);color:var(--bone);transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,opacity .15s}

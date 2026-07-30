@@ -29,6 +29,41 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
+// Маскот Melyo — как на мокапе (синяя «сова»).
+function Mascot({ size = 66 }) {
+  return (
+    <div className="mascot" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" width={size} height={size} fill="none" aria-hidden="true">
+        <ellipse cx="50" cy="58" rx="34" ry="30" fill="var(--amber)" />
+        <circle cx="38" cy="44" r="8" fill="var(--paper)" />
+        <circle cx="62" cy="44" r="8" fill="var(--paper)" />
+        <circle cx="38" cy="44" r="3.4" fill="#fff" />
+        <circle cx="62" cy="44" r="3.4" fill="#fff" />
+        <path d="M40 68 Q50 77 60 68" stroke="var(--paper)" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+        <path d="M30 30 L40 40 M70 30 L60 40" stroke="var(--amber)" strokeWidth="4" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+const NICHE_ICON_PATHS = {
+  "Дизайн или услуги на заказ": "M4 20l6-16h4l6 16M8 14h8",
+  "Приложение или игра": "M6 5h12v14H6zM10 9h4M12 7v4",
+  "Онлайн-магазин": "M4 8l2-4h12l2 4M4 8v11h16V8M9 19v-6h6v6",
+  "Салон, студия, кафе": "M6 11h9a3 3 0 010 6H6zM6 11V6M15 8h2a2 2 0 010 4h-2",
+  "Программа по подписке": "M4 6h16v12H4zM4 10h16M8 15h5",
+  "Блог или личный бренд": "M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0",
+  "Другое": "M12 4v16M4 12h16",
+};
+function NicheIcon({ name, on }) {
+  const d = NICHE_ICON_PATHS[name] || NICHE_ICON_PATHS["Другое"];
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d={d} stroke={on ? "var(--amber)" : "var(--muted)"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const BUILD_STEPS = [
   "Разбираю твои решения",
   "Смотрю, что ты выбираешь чаще всего",
@@ -672,19 +707,23 @@ export default function App() {
         )}
 
         {phase === "niche" && (
-          <div className="phase">
-            <div className="qnum">Шаг 1</div>
-            <div className="q">Чем занимаешься?</div>
-            <div className="hint">Своими словами, без умных терминов — дальше всё подстроится под тебя.</div>
-            <div className="row" style={{ marginTop: 10 }}>
+          <div className="phase screen">
+            <div className="dots5">
+              {[0, 1, 2, 3, 4].map((i) => <span key={i} className={"d5" + (i === 0 ? " on" : "")} />)}
+            </div>
+            <Mascot />
+            <div className="stepnum">Шаг 1 из 5</div>
+            <h2 className="scr-h">Чем занимаешься?</h2>
+            <div className="tiles">
               {NICHE_OPTIONS.map((o) => (
-                <button key={o} className={"chip" + (niche === o ? " on" : "")} onClick={() => setNiche(o)}>{o}</button>
+                <button key={o} className={"tile" + (niche === o ? " on" : "")} onClick={() => setNiche(o)}>
+                  <NicheIcon name={o} on={niche === o} />
+                  <span className="tilelabel">{o}</span>
+                </button>
               ))}
             </div>
-            <div className="nav">
-              <button className="btn ghost" onClick={() => setPhase("intro")}>Назад</button>
-              <button className="btn" disabled={!niche} onClick={() => { setTrackNiche(niche); track("niche_picked", { niche }); setPhase("seed"); }}>Дальше</button>
-            </div>
+            <button className="btnp" disabled={!niche} onClick={() => { setTrackNiche(niche); track("niche_picked", { niche }); setPhase("seed"); }}>Дальше</button>
+            <button className="btnlink" onClick={() => setPhase("intro")}>Назад</button>
           </div>
         )}
 
