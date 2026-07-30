@@ -36,6 +36,7 @@ export const CSS = `
 .bd .phase{animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .bd .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
+.bd .brandmark{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:-.02em;color:var(--amber)}
 .bd h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,6vw,46px);line-height:1.04;letter-spacing:-.02em;margin:16px 0 14px}
 .bd .lede{font-size:17px;line-height:1.6;color:var(--muted);max-width:52ch}
 .bd .btn{font-family:var(--body);font-weight:500;font-size:15px;padding:13px 24px;border-radius:999px;border:none;cursor:pointer;background:var(--surface2);color:var(--bone);transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,opacity .15s}

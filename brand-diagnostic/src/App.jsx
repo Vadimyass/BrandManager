@@ -489,7 +489,7 @@ export default function App() {
     track("share_clicked", { weakness: result?.weakness?.axis });
     const label = AXIS_LABELS[result?.weakness?.axis] ?? "";
     const url = typeof window !== "undefined" ? window.location.href : "";
-    const text = `Прошёл бизнес-диагностику: моя слепая зона — ${label}. А твоя? ${url}`;
+    const text = `Прошёл диагностику в Melyo: моя слепая зона — ${label}. А твоя? ${url}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Моя бизнес-диагностика", text, url });
@@ -527,7 +527,7 @@ export default function App() {
 
         {phase === "welcome" && (
           <div className="phase welcome">
-            <div className="eyebrow">Бизнес-диагностика</div>
+            <div className="brandmark">Melyo</div>
             <h1>Узнай, чем жертвуешь зря в своём деле — за 10 свайпов</h1>
             <p className="lede">AI-разбор твоих бизнес-решений: где твоя сила, где слепая зона и что с ней делать.</p>
 
@@ -660,7 +660,7 @@ export default function App() {
 
         {phase === "intro" && (
           <div className="phase">
-            <div className="eyebrow">Бизнес-диагностика · v5</div>
+            <div className="eyebrow">Melyo · диагностика</div>
             <h1>10 свайпов — и я скажу, чем ты жертвуешь зря</h1>
             <p className="lede">Для тех, кто строит своё — от игры до салона. Никаких анкет: выбирай в дилеммах, как в жизни. На выходе — твоя суперсила, слепая зона и план на месяц.</p>
             <div style={{ margin: "22px 0 18px" }}>
