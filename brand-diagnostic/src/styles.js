@@ -17,6 +17,35 @@ export const CSS = `
 @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,40px) scale(1.12)}}
 .bd .wrap{max-width:720px;margin:0 auto;position:relative;z-index:1}
 .bd .wrap.wrap-wide{max-width:1320px}
+/* Экран результата по мокапу Melyo */
+.bd .res-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+.bd .res-head{display:flex;align-items:center;gap:18px}
+.bd .res-head .mascot{width:76px}
+.bd .res-title{font-family:var(--disp);font-weight:700;font-size:clamp(26px,3.4vw,40px);line-height:1.08;letter-spacing:-.02em;color:var(--ink);margin:6px 0 0}
+.bd .res-done{font-family:var(--mono);font-size:12px;color:var(--muted-d);white-space:nowrap;padding-top:6px}
+.bd .res-diag{font-size:16.5px;line-height:1.6;color:var(--muted);max-width:70ch;margin:0 0 26px}
+.bd .res-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.bd .rescard{padding:24px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.bd .rescard.super{border-color:rgba(45,212,191,.35);box-shadow:inset 0 0 0 1px rgba(45,212,191,.15)}
+.bd .rlabel{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+.bd .rlabel.muted{color:var(--muted-d)}
+.bd .rtitle{font-family:var(--disp);font-weight:600;font-size:clamp(20px,2.6vw,26px);letter-spacing:-.01em;color:var(--ink);margin-bottom:8px}
+.bd .rnote{font-size:15.5px;line-height:1.55;color:var(--muted)}
+.bd .res-bottom{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:18px}
+.bd .res-plan{padding:22px 24px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.bd .planrow2{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.bd .planrow2:last-child{border-bottom:none}
+.bd .planrow2 .pnum2{width:26px;height:26px;flex:none;border-radius:50%;background:var(--surface2);color:var(--amber);font-family:var(--mono);font-size:13px;display:flex;align-items:center;justify-content:center}
+.bd .planrow2 .ptxt{flex:1;font-size:15.5px;line-height:1.4;color:var(--ink)}
+.bd .planrow2 .pweek{font-size:12.5px;color:var(--muted-d);white-space:nowrap}
+.bd .res-share{padding:24px;border-radius:16px;background:var(--surface2);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.bd .rsq{font-family:var(--disp);font-weight:600;font-size:19px;line-height:1.35;color:var(--ink);margin-bottom:12px}
+.bd .rsbrand{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--muted-d);margin-bottom:16px}
+@media(max-width:820px){
+  .bd .res-two{grid-template-columns:1fr}
+  .bd .res-bottom{grid-template-columns:1fr}
+  .bd .res-head .mascot{width:56px}
+}
 .bd .artblock{margin-top:32px}
 .bd .artlist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .bd .artitem{text-align:left;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,0.055);cursor:pointer;display:flex;flex-direction:column;gap:5px;transition:all .15s cubic-bezier(.2,.8,.2,1)}

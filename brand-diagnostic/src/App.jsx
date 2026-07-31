@@ -540,7 +540,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className={"wrap" + (phase === "welcome" ? " wrap-wide" : "")}>
+      <div className={"wrap" + (["welcome", "result"].includes(phase) ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">
@@ -782,46 +782,49 @@ export default function App() {
         )}
 
         {phase === "result" && result && (
-          <div className="phase">
-            <div className="card">
-              <div className="eyebrow">Диагноз по твоим решениям</div>
-              <div className="big">Слепая зона: {weakLabel}</div>
-              <div className="summary">{result.diagnosis}</div>
+          <div className="phase res">
+            <div className="res-top">
+              <div className="res-head">
+                <Mascot size={76} />
+                <div>
+                  <div className="eyebrow">Твой профиль предпринимателя</div>
+                  <h1 className="res-title">{result.superpower?.title ? `${result.superpower.title}, но слабое место — ${weakLabel.toLowerCase()}` : `Слепая зона: ${weakLabel}`}</h1>
+                </div>
+              </div>
+              <div className="res-done">Диагностика завершена · {decisions.length} дилемм</div>
+            </div>
 
-              <div className="axes">
-                {(result.axes || []).map((ax) => (
-                  <div className="axis" key={ax.key}>
-                    <div className="top">
-                      <span className="aname">{ax.name}</span>
-                      <span className="dots">
-                        {[1, 2, 3, 4, 5].map((d) => <span key={d} className={"dot" + (d <= ax.score ? " f" : "")} />)}
-                      </span>
-                    </div>
+            <p className="res-diag">{result.diagnosis}</p>
+
+            <div className="res-two">
+              <div className="rescard super">
+                <div className="rlabel">Суперсила</div>
+                <div className="rtitle">{result.superpower?.title}</div>
+                <div className="rnote">{result.superpower?.note}</div>
+              </div>
+              <div className="rescard weak">
+                <div className="rlabel muted">Слепая зона</div>
+                <div className="rtitle">{result.weakness?.title || weakLabel}</div>
+                <div className="rnote">{result.weakness?.note}</div>
+              </div>
+            </div>
+
+            <div className="res-bottom">
+              <div className="res-plan">
+                <div className="eyebrow">Мини-план на 3 недели</div>
+                {(result.sprints || []).slice(0, 3).map((s, i) => (
+                  <div className="planrow2" key={i}>
+                    <span className="pnum2">{i + 1}</span>
+                    <span className="ptxt">{s.title}</span>
+                    <span className="pweek">неделя {i + 1}</span>
                   </div>
                 ))}
               </div>
-
-              <div className="block">
-                <h3>Твоя суперсила · {superLabel}</h3>
-                <div className="gap"><span className="mk">↑</span><span><b>{result.superpower?.title}.</b> {result.superpower?.note}</span></div>
+              <div className="res-share">
+                <div className="rsq">«Моя слепая зона — {weakLabel}. А твоя?»</div>
+                <div className="rsbrand">MELYO · ДИАГНОСТИКА БИЗНЕСА</div>
+                <button className="btnp" onClick={shareResult}>{shared ? "Скопировано ✓" : "Поделиться карточкой"}</button>
               </div>
-
-              <div className="block">
-                <h3>Слабое место · {weakLabel}</h3>
-                <div className="gap"><span className="mk">↓</span><span><b>{result.weakness?.title}.</b> {result.weakness?.note}</span></div>
-              </div>
-
-              {result.sprints?.length > 0 && (
-                <div className="block">
-                  <h3>Твой план на первый месяц</h3>
-                  {result.sprints.map((s, i) => (
-                    <div className="next" key={i} style={{ marginBottom: 10 }}>
-                      <b>Спринт {i + 1}: {s.title}</b>
-                      {s.outcome ? <div style={{ marginTop: 6, opacity: .85 }}>{s.outcome}</div> : null}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {!user && (
@@ -837,21 +840,13 @@ export default function App() {
             {hook && (
               <div className="coursecta">
                 <div>
-                  <div className="eyebrow" style={{ color: "var(--violet)" }}>Есть курс под твою слепую зону</div>
+                  <div className="eyebrow" style={{ color: "var(--amber)" }}>Есть курс под твою слепую зону</div>
                   <div className="cctatitle">{hook.course}</div>
-                  <div className="cctasub">Уроки от основ к глубине, по одной идее за раз, с примерами и заданиями. Первый — бесплатно, прямо сейчас.</div>
+                  <div className="cctasub">Уроки от основ к глубине, по одной идее за раз. Первый — бесплатно.</div>
                 </div>
-                <button className="btn amber cctabtn" onClick={openCourse}>Открыть курс →</button>
+                <button className="btnp cctabtn" onClick={openCourse}>Открыть курс →</button>
               </div>
             )}
-
-            <div className="sharecard">
-              <div>
-                <div className="cctatitle" style={{ fontSize: 20 }}>Моя слепая зона — {weakLabel}. А твоя?</div>
-                <div className="cctasub">Скинь друзьям-фаундерам — сравните.</div>
-              </div>
-              <button className="btn cctabtn" onClick={shareResult}>{shared ? "Скопировано ✓" : "Поделиться"}</button>
-            </div>
 
             <div className="fbrow">
               <span className="fbq">Диагноз попал?</span>
@@ -863,13 +858,8 @@ export default function App() {
                   <button className="btn ghost" onClick={() => giveFeedback("miss")}>Мимо</button>
                 </>
               )}
+              <button className="btnlink" onClick={reset} style={{ marginLeft: "auto" }}>Пройти заново</button>
             </div>
-
-            <div className="nav">
-              <button className="btn ghost" onClick={reset}>Пройти заново</button>
-              <button className="btn" onClick={() => { track("offer_viewed"); setPhase("offer"); }}>Что в курсе</button>
-            </div>
-            <div className="foot">Бета · колода и диагноз сгенерированы под твою нишу</div>
           </div>
         )}
 
