@@ -566,7 +566,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs", "lesson"].includes(phase) ? " wrap-wide" : "")}>
+      <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs", "lesson", "offer"].includes(phase) ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">
@@ -663,8 +663,13 @@ export default function App() {
         {phase === "cabinet" && (
           <div className="phase">
             <button className="btn ghost" style={{ marginBottom: 14 }} onClick={() => setPhase(prevPhase && prevPhase !== "cabinet" ? prevPhase : (result ? "result" : "welcome"))}>← Назад</button>
-            <div className="eyebrow">Личный кабинет</div>
-            <h1 style={{ fontSize: "clamp(26px,5vw,38px)" }}>Привет{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(" ")[0]}` : ""}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" style={{ width: 64, height: "auto", flex: "none" }} />
+              <div>
+                <div className="eyebrow">Личный кабинет</div>
+                <h1 style={{ fontSize: "clamp(24px,3vw,34px)", margin: "6px 0 0" }}>Привет{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(" ")[0]}` : ""}</h1>
+              </div>
+            </div>
             {!progress?.weaknessAxis ? (
               <>
                 <p className="lede">Ты ещё не проходил диагностику. Пройди — и тут появится твой прогресс.</p>
@@ -895,52 +900,47 @@ export default function App() {
         )}
 
         {phase === "offer" && result && hook && (
-          <div className="phase">
-            <div className="eyebrow">Курс под твою слепую зону</div>
-            <h1 style={{ fontSize: "clamp(26px,5vw,38px)" }}>{hook.course}</h1>
-            <p className="lede">
-              Ты только что прочитал начало первого урока. Дальше — ещё четыре, собранные под {weakLabel.toLowerCase()} и твою нишу
-              {calibration ? ` (${calibration.industry.toLowerCase()})` : ""}.
-            </p>
+          <div className="phase off-grid">
+            <div className="off-main">
+              <div className="eyebrow">Курс под твою слепую зону</div>
+              <h1 style={{ fontSize: "clamp(26px,3.4vw,40px)" }}>{hook.course}</h1>
+              <p className="lede">
+                Ты только что прочитал начало первого урока. Дальше — ещё уроки, собранные под {weakLabel.toLowerCase()} и твою нишу
+                {calibration ? ` (${calibration.industry.toLowerCase()})` : ""}.
+              </p>
 
-            <div className="gets">
-              {WHAT_YOU_GET.map((g) => (
-                <div className="get" key={g.icon}>
-                  <span className="gnum">{g.icon}</span>
-                  <div>
-                    <div className="gtitle">{g.title}</div>
-                    <div className="gnote">{g.note}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {result.sprints?.length > 0 && (
-              <div className="planbox">
-                <div className="eyebrow" style={{ color: "var(--violet)" }}>Что ты сделаешь за месяц</div>
-                {result.sprints.map((s, i) => (
-                  <div className="planrow" key={i}>
-                    <span className="pnum">{i + 1}</span>
-                    <span>{s.title}</span>
+              <div className="gets">
+                {WHAT_YOU_GET.map((g) => (
+                  <div className="get" key={g.icon}>
+                    <span className="gnum">{g.icon}</span>
+                    <div>
+                      <div className="gtitle">{g.title}</div>
+                      <div className="gnote">{g.note}</div>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
 
-            <button className="btn amber" style={{ width: "100%", marginTop: 24, padding: "16px 24px", fontSize: 16 }} onClick={openCourse}>
-              Начать курс — бесплатно
-            </button>
-
-            <div className="pricecard" style={{ marginTop: 14 }}>
-              <div>
-                <div className="price">{COURSE_PRICE}</div>
-                <div className="pricenote">весь курс навсегда · без почты и регистрации</div>
-              </div>
-              <button className="btn ghost" onClick={() => setPhase("checkout")}>Забрать весь курс</button>
+              {result.sprints?.length > 0 && (
+                <div className="planbox">
+                  <div className="eyebrow" style={{ color: "var(--amber)" }}>Что ты сделаешь за месяц</div>
+                  {result.sprints.map((s, i) => (
+                    <div className="planrow" key={i}>
+                      <span className="pnum">{i + 1}</span>
+                      <span>{s.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="nav">
-              <button className="btn ghost" onClick={() => setPhase("result")}>Вернуться к диагнозу</button>
+            <div className="off-side">
+              <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="off-masc" />
+              <div className="price">{COURSE_PRICE}</div>
+              <div className="pricenote">весь курс навсегда</div>
+              <button className="btn amber" style={{ width: "100%", padding: "15px", marginTop: 8 }} onClick={openCourse}>Начать курс — бесплатно</button>
+              <button className="btnp" style={{ marginTop: 10 }} onClick={() => setPhase("checkout")}>Забрать весь курс</button>
+              <button className="btnlink" onClick={() => setPhase("result")}>← к диагнозу</button>
             </div>
           </div>
         )}

@@ -286,6 +286,13 @@ export const CSS = `
 .bd .tturn{font-size:16.5px;line-height:1.65;margin:0;padding-left:16px;border-left:2px solid var(--amber);max-width:58ch}
 .bd .tq{font-family:var(--disp);font-weight:600;font-size:clamp(19px,3.4vw,24px);letter-spacing:-.01em;margin:22px 0 8px}
 .bd .tlesson{font-size:15px;color:var(--muted);line-height:1.55;max-width:52ch}
+/* Оффер: десктоп 2 колонки (контент | карточка покупки) */
+.bd .off-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:start;max-width:1040px;margin:0 auto}
+.bd .off-side{position:sticky;top:20px;padding:26px;border-radius:20px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;text-align:center}
+.bd .off-masc{width:96px;height:auto;margin-bottom:10px}
+.bd .off-side .price{font-family:var(--disp);font-weight:700;font-size:40px;color:var(--ink);line-height:1}
+.bd .off-side .pricenote{font-size:13px;color:var(--muted);margin:6px 0 6px}
+@media(max-width:820px){.bd .off-grid{grid-template-columns:1fr}.bd .off-side{position:static}}
 .bd .gets{margin:26px 0 6px}
 .bd .get{display:flex;gap:16px;padding:15px 0;border-bottom:1px solid var(--line);animation:fadeUp .4s both}
 .bd .get:nth-child(1){animation-delay:.05s}.bd .get:nth-child(2){animation-delay:.1s}.bd .get:nth-child(3){animation-delay:.15s}.bd .get:nth-child(4){animation-delay:.2s}.bd .get:nth-child(5){animation-delay:.25s}
