@@ -550,7 +550,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs"].includes(phase) ? " wrap-wide" : "")}>
+      <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs", "lesson"].includes(phase) ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">
@@ -1003,61 +1003,69 @@ export default function App() {
 
         {phase === "lesson" && lesson && (
           <div className="phase">
-            <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / (courseTotal || lesson.total)) * 100}%` }} /></div>
-            <div className="qnum">Урок {lesson.index + 1} из {courseTotal || lesson.total}</div>
-            <h1 style={{ fontSize: "clamp(24px,4.6vw,34px)", margin: "10px 0 20px" }}>{lesson.title}</h1>
+            <div className="lsn-top">
+              <span className="deckcount">Урок {lesson.index + 1} из {courseTotal || lesson.total}{lesson.term ? ` · ${lesson.term}` : ""}</span>
+              <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / (courseTotal || lesson.total)) * 100}%` }} /></div>
+            </div>
 
             {lessonStage === "read" && (
-              <div>
-                {lesson.stat && (
-                  <>
-                    <div className="tstat">{lesson.stat}</div>
-                    <div className="tstatnote">{lesson.statNote}</div>
-                  </>
-                )}
-                <p className="tbody">{lesson.body}</p>
-                {lesson.turn && <p className="tturn">{lesson.turn}</p>}
-
-                {lesson.scheme?.length > 1 && (
-                  <div className="scheme">
-                    {lesson.scheme.map((sc, i) => (
-                      <span className="schemepart" key={i}>
-                        <span className="schemenode">{sc}</span>
-                        {i < lesson.scheme.length - 1 && <span className="schemearrow">→</span>}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {lesson.examples?.length > 0 && (
-                  <div className="examples">
-                    <div className="eyebrow" style={{ color: "var(--violet)" }}>Разбор: почему так вышло</div>
-                    {lesson.examples.map((ex, i) => (
-                      <div className="example" key={i}>
-                        <div className="excase">{ex.case}</div>
-                        <div className="exwhy"><span className="exmk">почему:</span> {ex.why}</div>
+              <div className="lsn-grid">
+                <div className="lsn-visual">
+                  {lesson.scheme?.length > 1 && (
+                    <div className="lsn-vcard">
+                      <div className="eyebrow" style={{ color: "var(--amber)" }}>Как это работает</div>
+                      <div className="scheme">
+                        {lesson.scheme.map((sc, i) => (
+                          <span className="schemepart" key={i}>
+                            <span className="schemenode">{sc}</span>
+                            {i < lesson.scheme.length - 1 && <span className="schemearrow">→</span>}
+                          </span>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="termbox">
-                  <div className="eyebrow" style={{ color: "var(--amber)" }}>Термин: {lesson.term}</div>
-                  <div className="termnote">{lesson.termNote}</div>
+                    </div>
+                  )}
+                  {lesson.examples?.length > 0 && (
+                    <div className="lsn-vcard">
+                      <div className="eyebrow" style={{ color: "var(--violet)" }}>Разбор: почему так вышло</div>
+                      {lesson.examples.map((ex, i) => (
+                        <div className="example" key={i}>
+                          <div className="excase">{ex.case}</div>
+                          <div className="exwhy"><span className="exmk">почему:</span> {ex.why}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!(lesson.scheme?.length > 1) && !(lesson.examples?.length > 0) && (
+                    <div className="lsn-ph"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" /></div>
+                  )}
                 </div>
 
-                {lesson.task && (
-                  <div className="taskbox">
-                    <div className="eyebrow" style={{ color: "var(--violet)" }}>Твой ход</div>
-                    <div className="tasktext">{lesson.task}</div>
-                  </div>
-                )}
+                <div className="lsn-main">
+                  {lesson.stat && <div className="tstat">{lesson.stat}</div>}
+                  {lesson.statNote && <div className="tstatnote">{lesson.statNote}</div>}
+                  <h1 className="lsn-h1">{lesson.title}</h1>
+                  <p className="tbody">{lesson.body}</p>
+                  {lesson.turn && <p className="tturn">{lesson.turn}</p>}
 
-                <div className="nav">
-                  <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
-                  <button className="btn amber" onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
-                    {lesson.quiz?.length ? "Проверить себя" : "К заданию"}
-                  </button>
+                  <div className="termbox">
+                    <div className="eyebrow" style={{ color: "var(--amber)" }}>Простыми словами</div>
+                    <div className="termnote">{lesson.termNote}</div>
+                    <span className="termtag">{lesson.term}</span>
+                  </div>
+
+                  {lesson.task && (
+                    <div className="taskbox">
+                      <div className="eyebrow" style={{ color: "var(--amber)" }}>Сделай на своём продукте</div>
+                      <div className="tasktext">{lesson.task}</div>
+                    </div>
+                  )}
+
+                  <div className="nav">
+                    <button className="btnlink" onClick={() => setPhase("result")}>← К диагнозу</button>
+                    <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
+                      {lesson.quiz?.length ? "К квизу" : "К заданию"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

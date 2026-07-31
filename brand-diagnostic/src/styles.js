@@ -321,6 +321,22 @@ export const CSS = `
 .bd .excase{font-size:15px;font-weight:500;line-height:1.5}
 .bd .exwhy{font-size:14.5px;color:var(--muted);line-height:1.55;margin-top:6px}
 .bd .exmk{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--violet)}
+/* Урок: десктоп 2 колонки (визуал | контент) */
+.bd .lsn-top{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.bd .lsn-top .bar{flex:1;margin-bottom:0}
+.bd .lsn-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:32px;align-items:start}
+.bd .lsn-visual{display:flex;flex-direction:column;gap:16px;position:sticky;top:20px}
+.bd .lsn-vcard{padding:20px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.bd .lsn-ph{min-height:280px;border-radius:16px;background:var(--surface);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center}
+.bd .lsn-ph img{width:120px;opacity:.5}
+.bd .lsn-h1{font-family:var(--disp);font-weight:700;font-size:clamp(24px,2.8vw,32px);line-height:1.1;letter-spacing:-.02em;color:var(--ink);margin:6px 0 16px}
+.bd .termtag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;padding:5px 12px;border-radius:8px;background:var(--surface2);color:var(--amber)}
+@media(max-width:820px){
+  .bd .lsn-grid{grid-template-columns:1fr;gap:20px}
+  .bd .lsn-visual{position:static;order:2}
+  .bd .lsn-main{order:1}
+}
+.bd .quizbox{max-width:760px;margin:0 auto}
 .bd .termbox{margin-top:26px;padding:18px 20px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 16px 16px 0;background:rgba(255,255,255,0.055)}
 .bd .termnote{font-size:15.5px;line-height:1.6;margin-top:8px;max-width:58ch}
 .bd .taskbox{margin-top:18px;padding:20px 22px;background:var(--surface2);color:var(--bone);border-radius:18px}
