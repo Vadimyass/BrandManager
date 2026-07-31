@@ -540,7 +540,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className={"wrap" + (["welcome", "result"].includes(phase) ? " wrap-wide" : "")}>
+      <div className={"wrap" + (["welcome", "result", "niche", "intro"].includes(phase) ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">

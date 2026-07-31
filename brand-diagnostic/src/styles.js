@@ -68,7 +68,8 @@ export const CSS = `
 .bd .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}
 .bd .brandmark{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:-.02em;color:var(--amber)}
 /* Экраны в стиле мокапа Melyo: центрированные, маскот, плитки */
-.bd .screen{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:440px;margin:0 auto}
+.bd .screen{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:1000px;margin:0 auto;padding-top:10px}
+.bd .screen .scr-h{font-size:clamp(24px,3vw,34px)}
 .bd .dots5{display:flex;gap:6px;width:100%;max-width:300px;margin:6px 0 22px}
 .bd .d5{height:4px;flex:1;border-radius:4px;background:var(--line)}
 .bd .d5.on{background:var(--amber)}
@@ -77,12 +78,14 @@ export const CSS = `
 .bd .scr-h{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:-.01em;color:var(--ink);margin:0 0 8px}
 .bd .scr-sub{font-size:15px;line-height:1.55;color:var(--muted);margin:0 0 20px;max-width:40ch}
 .bd .mascot{filter:drop-shadow(0 14px 28px rgba(0,0,0,.4))}
-.bd .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-bottom:22px}
+.bd .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;width:100%;margin-bottom:24px}
+.bd .tile{min-height:112px}
 .bd .tile{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);cursor:pointer;text-align:left;transition:all .16s cubic-bezier(.2,.8,.2,1)}
 .bd .tile:hover{border-color:var(--muted);transform:translateY(-2px)}
 .bd .tile.on{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber),0 0 24px rgba(145,132,217,.18)}
 .bd .tilelabel{font-size:14px;line-height:1.35;font-weight:500}
 .bd .btnp{width:100%;font-family:var(--body);font-weight:500;font-size:15px;padding:14px;border-radius:12px;background:transparent;border:1px solid var(--amber);color:var(--amber);cursor:pointer;transition:all .16s}
+.bd .screen .btnp{max-width:380px}
 .bd .btnp:hover:not(:disabled){background:rgba(145,132,217,.12)}
 .bd .btnp:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line);color:var(--muted)}
 .bd .btnlink{background:none;border:none;color:var(--muted);font-family:var(--body);font-size:14px;padding:12px;cursor:pointer;margin-top:4px}
