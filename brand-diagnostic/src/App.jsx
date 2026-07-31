@@ -29,20 +29,15 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
-// Маскот Melyo — как на мокапе (синяя «сова»).
-function Mascot({ size = 66 }) {
+// Маскот Melyo — хамелеон (картинка дизайнера).
+function Mascot({ size = 96 }) {
   return (
-    <div className="mascot" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 100 100" width={size} height={size} fill="none" aria-hidden="true">
-        <ellipse cx="50" cy="58" rx="34" ry="30" fill="var(--amber)" />
-        <circle cx="38" cy="44" r="8" fill="var(--paper)" />
-        <circle cx="62" cy="44" r="8" fill="var(--paper)" />
-        <circle cx="38" cy="44" r="3.4" fill="#fff" />
-        <circle cx="62" cy="44" r="3.4" fill="#fff" />
-        <path d="M40 68 Q50 77 60 68" stroke="var(--paper)" strokeWidth="3.2" strokeLinecap="round" fill="none" />
-        <path d="M30 30 L40 40 M70 30 L60 40" stroke="var(--amber)" strokeWidth="4" strokeLinecap="round" />
-      </svg>
-    </div>
+    <img
+      src={`${import.meta.env.BASE_URL}melyo-mascot.png`}
+      alt="Маскот Melyo"
+      className="mascot"
+      style={{ width: size, height: "auto" }}
+    />
   );
 }
 
@@ -693,15 +688,13 @@ export default function App() {
         )}
 
         {phase === "intro" && (
-          <div className="phase">
-            <div className="eyebrow">Melyo · диагностика</div>
-            <h1>10 свайпов — и я скажу, чем ты жертвуешь зря</h1>
-            <p className="lede">Для тех, кто строит своё — от игры до салона. Никаких анкет: выбирай в дилеммах, как в жизни. На выходе — твоя суперсила, слепая зона и план на месяц.</p>
-            <div style={{ margin: "22px 0 18px" }}>
-              <input className="field" style={{ maxWidth: 340 }} placeholder="Название проекта (необязательно)" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <button className="btn" onClick={() => setPhase("niche")}>Начать</button>
-            <div className="foot">Бета · колода генерируется под твою нишу</div>
+          <div className="phase screen">
+            <Mascot size={110} />
+            <h2 className="scr-h" style={{ marginTop: 14 }}>Как называется твой проект?</h2>
+            <p className="scr-sub">Необязательно — но так разбор будет обращаться к нему по имени.</p>
+            <input className="field" style={{ maxWidth: 360, textAlign: "center" }} placeholder="Название проекта" value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btnp" style={{ marginTop: 18 }} onClick={() => setPhase("niche")}>Начать</button>
+            <button className="btnlink" onClick={() => setPhase("welcome")}>Назад</button>
           </div>
         )}
 

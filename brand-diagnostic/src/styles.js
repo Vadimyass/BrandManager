@@ -45,7 +45,9 @@ export const CSS = `
 .bd .d5.on{background:var(--amber)}
 .bd .mascot{filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));margin-bottom:6px}
 .bd .stepnum{font-size:12px;color:var(--muted-d);margin:8px 0 6px}
-.bd .scr-h{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:-.01em;color:var(--ink);margin:0 0 22px}
+.bd .scr-h{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:-.01em;color:var(--ink);margin:0 0 8px}
+.bd .scr-sub{font-size:15px;line-height:1.55;color:var(--muted);margin:0 0 20px;max-width:40ch}
+.bd .mascot{filter:drop-shadow(0 14px 28px rgba(0,0,0,.4))}
 .bd .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-bottom:22px}
 .bd .tile{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);cursor:pointer;text-align:left;transition:all .16s cubic-bezier(.2,.8,.2,1)}
 .bd .tile:hover{border-color:var(--muted);transform:translateY(-2px)}
