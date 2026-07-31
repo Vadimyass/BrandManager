@@ -41,6 +41,21 @@ function Mascot({ size = 96 }) {
   );
 }
 
+// Единый прогресс Фазы 1 — сегментами через все шаги.
+const FLOW = ["intro", "niche", "seed", "tradeoffs", "links"];
+function FlowBar({ phase }) {
+  const idx = FLOW.indexOf(phase);
+  if (idx < 0) return null;
+  return (
+    <div className="flowbar">
+      <div className="dots5">
+        {FLOW.map((_, i) => <span key={i} className={"d5" + (i <= idx ? " on" : "")} />)}
+      </div>
+      <div className="stepnum">Шаг {idx + 1} из {FLOW.length}</div>
+    </div>
+  );
+}
+
 const NICHE_ICON_PATHS = {
   "Дизайн или услуги на заказ": "M4 20l6-16h4l6 16M8 14h8",
   "Приложение или игра": "M6 5h12v14H6zM10 9h4M12 7v4",
@@ -720,6 +735,7 @@ export default function App() {
 
         {phase === "intro" && (
           <div className="phase screen">
+            <FlowBar phase="intro" />
             <Mascot size={110} />
             <h2 className="scr-h" style={{ marginTop: 14 }}>Как называется твой проект?</h2>
             <p className="scr-sub">Необязательно — но так разбор будет обращаться к нему по имени.</p>
@@ -731,11 +747,8 @@ export default function App() {
 
         {phase === "niche" && (
           <div className="phase screen">
-            <div className="dots5">
-              {[0, 1, 2, 3, 4].map((i) => <span key={i} className={"d5" + (i === 0 ? " on" : "")} />)}
-            </div>
+            <FlowBar phase="niche" />
             <Mascot />
-            <div className="stepnum">Шаг 1 из 5</div>
             <h2 className="scr-h">Чем занимаешься?</h2>
             <div className="tiles">
               {NICHE_OPTIONS.map((o) => (
@@ -752,6 +765,7 @@ export default function App() {
 
         {phase === "seed" && (
           <div className="phase">
+            <FlowBar phase="seed" />
             <Deck questions={SEED_CARDS} onDone={onSeedDone} />
           </div>
         )}
@@ -766,6 +780,7 @@ export default function App() {
 
         {phase === "tradeoffs" && tradeoffs.length > 0 && (
           <div className="phase">
+            <FlowBar phase="tradeoffs" />
             {calibration && (
               <div className="share" style={{ marginBottom: 16, marginTop: 0, justifyContent: "center" }}>
                 <span className="pill">Похоже на: {calibration.industry} · {calibration.model}</span>
@@ -783,7 +798,7 @@ export default function App() {
 
         {phase === "links" && (
           <div className="phase">
-            <div className="qnum">Почти всё</div>
+            <FlowBar phase="links" />
             <div className="q">Кинь ссылки</div>
             <div className="hint">Необязательно, но диагноз будет точнее.</div>
             {LINK_FIELDS.map((f) => (

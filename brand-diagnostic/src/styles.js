@@ -70,7 +70,10 @@ export const CSS = `
 /* Экраны в стиле мокапа Melyo: центрированные, маскот, плитки */
 .bd .screen{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:1000px;margin:0 auto;padding-top:10px}
 .bd .screen .scr-h{font-size:clamp(24px,3vw,34px)}
-.bd .dots5{display:flex;gap:6px;width:100%;max-width:300px;margin:6px 0 22px}
+.bd .flowbar{max-width:340px;margin:0 auto 24px;text-align:center}
+.bd .flowbar .dots5{margin:0 0 8px}
+.bd .flowbar .stepnum{margin:0}
+.bd .dots5{display:flex;gap:6px;width:100%;max-width:340px;margin:6px auto 22px}
 .bd .d5{height:4px;flex:1;border-radius:4px;background:var(--line)}
 .bd .d5.on{background:var(--amber)}
 .bd .mascot{filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));margin-bottom:6px}
