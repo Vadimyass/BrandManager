@@ -108,27 +108,43 @@ function Quiz({ items, onDone }) {
     else setI(i + 1);
   };
 
+  const opt = (side) => (
+    <button
+      className={"qopt" + (picked ? (item.correct === side ? " correct" : picked === side ? " wrong" : " dim") : "")}
+      disabled={!!picked}
+      onClick={() => setPicked(side)}
+    >
+      <span>{side === "left" ? item.left : item.right}</span>
+      {picked && item.correct === side && <span className="qcheck">✓</span>}
+    </button>
+  );
+
   return (
-    <div className="quizbox">
-      <div className="eyebrow" style={{ color: "var(--violet)" }}>Проверь себя · {i + 1} из {items.length}</div>
-      <div className="quizq">{item.q}</div>
-      <div className="optrow" style={{ marginTop: 14 }}>
-        <button className={"opt l" + (picked ? (item.correct === "left" ? " good" : " meh") : "")} disabled={!!picked} onClick={() => setPicked("left")}>
-          {item.left}
-        </button>
-        <button className={"opt r" + (picked ? (item.correct === "right" ? " good" : " meh") : "")} disabled={!!picked} onClick={() => setPicked("right")}>
-          {item.right}
-        </button>
-      </div>
-      {picked && (
-        <div className="quizfb">
-          <div className="qverdict">{isRight ? "Верно" : "Смотри глубже"}</div>
-          <div className="qexplain">{item.explain}</div>
-          <button className="btn" style={{ marginTop: 14 }} onClick={next}>
-            {i + 1 >= items.length ? "Закончить урок" : "Следующий вопрос"}
-          </button>
+    <div className="qz-grid">
+      <div className="qz-left">
+        <div className="eyebrow" style={{ color: "var(--amber)" }}>Вопрос {i + 1} из {items.length}</div>
+        <div className="qz-q">{item.q}</div>
+        <div className="qz-opts">
+          {opt("left")}
+          {opt("right")}
         </div>
-      )}
+      </div>
+      <div className="qz-side">
+        <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="qz-masc" />
+        {picked ? (
+          <>
+            <div className={"qz-verdict" + (isRight ? " ok" : " miss")}>{isRight ? "Точно!" : "Смотри глубже"}</div>
+            <div className="qz-explain">{item.explain}</div>
+            <div className="qz-foot">
+              <span className={isRight ? "qz-xp" : "qz-xp off"}>{isRight ? "+15 XP за верный ответ" : "без очков"}</span>
+              <span className="qz-cnt">{i + 1}/{items.length}</span>
+            </div>
+            <button className="btnp" onClick={next}>{i + 1 >= items.length ? "Закончить урок" : "Следующий вопрос"}</button>
+          </>
+        ) : (
+          <div className="qz-prompt">Выбери ответ слева — я скажу, попал ли ты, и почему.</div>
+        )}
+      </div>
     </div>
   );
 }

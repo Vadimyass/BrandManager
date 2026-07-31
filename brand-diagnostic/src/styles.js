@@ -337,6 +337,34 @@ export const CSS = `
   .bd .lsn-main{order:1}
 }
 .bd .quizbox{max-width:760px;margin:0 auto}
+/* Квиз: десктоп 2 колонки (вопрос+варианты | хамелеон-разбор) */
+.bd .qz-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:30px;align-items:start}
+.bd .qz-q{font-family:var(--disp);font-weight:700;font-size:clamp(22px,2.8vw,30px);line-height:1.18;letter-spacing:-.01em;color:var(--ink);margin:10px 0 22px}
+.bd .qz-opts{display:flex;flex-direction:column;gap:12px}
+.bd .qopt{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:16px 18px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15.5px;line-height:1.4;cursor:pointer;transition:all .15s cubic-bezier(.2,.8,.2,1)}
+.bd .qopt:hover:not(:disabled){border-color:var(--amber);transform:translateY(-1px)}
+.bd .qopt:disabled{cursor:default}
+.bd .qopt.correct{border-color:var(--amber);background:rgba(45,212,191,.12);color:var(--ink)}
+.bd .qopt.wrong{border-color:var(--no);background:rgba(224,115,106,.1)}
+.bd .qopt.dim{opacity:.45}
+.bd .qcheck{color:var(--amber);font-weight:700}
+.bd .qz-side{padding:24px;border-radius:18px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;position:sticky;top:20px}
+.bd .qz-masc{width:88px;height:auto;margin-bottom:14px}
+.bd .qz-prompt{font-size:15px;line-height:1.55;color:var(--muted)}
+.bd .qz-verdict{font-family:var(--disp);font-weight:700;font-size:24px;margin-bottom:10px}
+.bd .qz-verdict.ok{color:var(--amber)}
+.bd .qz-verdict.miss{color:var(--muted)}
+.bd .qz-explain{font-size:15px;line-height:1.6;color:var(--muted);margin-bottom:16px}
+.bd .qz-foot{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:16px}
+.bd .qz-xp{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.bd .qz-xp.off{color:var(--muted-d)}
+.bd .qz-cnt{font-family:var(--mono);font-size:12px;color:var(--muted-d)}
+.bd .qz-side .btnp{width:100%}
+@media(max-width:820px){
+  .bd .qz-grid{grid-template-columns:1fr;gap:18px}
+  .bd .qz-side{position:static;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .bd .qz-masc{width:56px;margin-bottom:0;margin-right:12px}
+}
 .bd .termbox{margin-top:26px;padding:18px 20px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:0 16px 16px 0;background:rgba(255,255,255,0.055)}
 .bd .termnote{font-size:15.5px;line-height:1.6;margin-top:8px;max-width:58ch}
 .bd .taskbox{margin-top:18px;padding:20px 22px;background:var(--surface2);color:var(--bone);border-radius:18px}
