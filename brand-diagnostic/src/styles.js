@@ -16,6 +16,7 @@ export const CSS = `
 .bd .blob.b{width:460px;height:460px;background:rgba(145,132,217,.12);bottom:-140px;left:-120px;animation:drift 26s ease-in-out infinite alternate-reverse}
 @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,40px) scale(1.12)}}
 .bd .wrap{max-width:720px;margin:0 auto;position:relative;z-index:1}
+.bd .wrap.wrap-wide{max-width:1320px}
 .bd .artblock{margin-top:32px}
 .bd .artlist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .bd .artitem{text-align:left;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,0.055);cursor:pointer;display:flex;flex-direction:column;gap:5px;transition:all .15s cubic-bezier(.2,.8,.2,1)}
@@ -163,13 +164,16 @@ export const CSS = `
 .bd .sharecard .btn{background:var(--amber);color:#ffffff}
 @media(max-width:520px){.bd .sharecard{flex-direction:column;align-items:stretch}.bd .sharecard .cctabtn{width:100%}}
 /* ВЕЛКОМ по мокапу Melyo: десктоп — 2 колонки с разделителем, мобилка — стопка */
-.bd .wl{max-width:1180px;margin:0 auto}
+.bd .wl{width:100%;margin:0 auto}
 .bd .wl-brand{display:flex;align-items:center;gap:10px;margin-bottom:34px}
 .bd .wl-brandimg{width:34px;height:34px;object-fit:contain}
 .bd .wl-brand span{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:-.01em;color:var(--ink)}
 .bd .wl-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
-.bd .wl-left{padding-right:56px}
-.bd .wl-right{padding-left:56px;border-left:1px solid var(--line);display:flex;flex-direction:column}
+.bd .wl-grid{grid-template-columns:1.15fr 1fr;gap:0}
+.bd .wl-left{padding-right:80px;max-width:640px}
+.bd .wl-right{padding-left:80px;border-left:1px solid var(--line);display:flex;flex-direction:column;max-width:560px}
+.bd .wl-stat b{white-space:nowrap}
+.bd .wl-stat span{white-space:nowrap}
 .bd .wl-hero{position:relative;margin-bottom:26px}
 .bd .wl-mascot{width:210px;max-width:60%;height:auto;filter:drop-shadow(0 18px 34px rgba(0,0,0,.4))}
 .bd .wl-bubble{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 18px;font-size:15px;line-height:1.5;color:var(--ink);max-width:280px;margin-top:-30px;margin-left:60px}

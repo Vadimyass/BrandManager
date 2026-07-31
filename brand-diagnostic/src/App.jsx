@@ -545,7 +545,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className="wrap">
+      <div className={"wrap" + (phase === "welcome" ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">
