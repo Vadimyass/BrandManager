@@ -561,46 +561,45 @@ export default function App() {
         )}
 
         {phase === "welcome" && (
-          <div className="phase welcome">
-            <div className="brandmark">Melyo</div>
-            <h1>Узнай, чем жертвуешь зря в своём деле — за 10 свайпов</h1>
-            <p className="lede">AI-разбор твоих бизнес-решений: где твоя сила, где слепая зона и что с ней делать.</p>
+          <div className="phase wl">
+            <div className="wl-brand"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="wl-brandimg" /><span>melyo</span></div>
 
-            <div className="wcards">
-              <div className="wcard on">
-                <div className="wtag">Рекомендуем</div>
-                <div className="wtitle">Войти через Google</div>
-                <ul className="wlist">
-                  <li>Диагноз и прогресс курса сохранятся</li>
-                  <li>Персональный план всегда под рукой</li>
-                  <li>Продолжишь с любого устройства</li>
-                </ul>
-                <button className="btn amber" style={{ width: "100%" }} onClick={() => { track("login_clicked", { from: "welcome" }); signInWithGoogle(); }}>Продолжить с Google</button>
+            <div className="wl-grid">
+              <div className="wl-left">
+                <div className="wl-hero">
+                  <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Маскот Melyo" className="wl-mascot" />
+                  <div className="wl-bubble">Десять дилемм — и я скажу, где у твоего бизнеса дыра.</div>
+                </div>
+                <h1 className="wl-h1">Найди свою суперсилу в бизнесе за 5 минут</h1>
+                <p className="wl-sub">Не тест с правильными ответами, а колода дилемм «или-или». Ты выбираешь, чем жертвуешь — я показываю слепую зону и собираю план обучения.</p>
+                <div className="wl-stats">
+                  <div className="wl-stat"><b>10</b><span>дилемм</span></div>
+                  <div className="wl-stat"><b>5</b><span>мини-курсов</span></div>
+                  <div className="wl-stat"><b>4</b><span>минуты на урок</span></div>
+                </div>
               </div>
-              <div className="wcard">
-                <div className="wtag">Без регистрации</div>
-                <div className="wtitle">Пройти как гость</div>
-                <ul className="wlist">
-                  <li>Начнёшь прямо сейчас</li>
-                  <li>Пройдёшь диагностику и откроешь курс</li>
-                  <li>Прогресс не сохранится</li>
-                </ul>
-                <button className="btn ghost" style={{ width: "100%" }} onClick={() => { track("guest_chosen"); setPhase("intro"); }}>Продолжить гостем</button>
+
+              <div className="wl-right">
+                <h2 className="wl-h2">Начнём</h2>
+                <p className="wl-note">Результат диагностики сохраним в твой профиль.</p>
+                <button className="gbtn" onClick={() => { track("login_clicked", { from: "welcome" }); signInWithGoogle(); }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"/><path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 010-4.18V7.07H2.18a11 11 0 000 9.86l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
+                  Войти через Google
+                </button>
+                <button className="gbtn ghost" onClick={() => { track("guest_chosen"); setPhase("intro"); }}>Продолжить гостем</button>
+                <p className="wl-fine">Гостевой прогресс живёт в этом браузере — вход можно добавить позже.</p>
+
+                <div className="wl-or"><span>или почитать бесплатно</span></div>
+                <div className="wl-articles">
+                  {ARTICLES.map((a) => (
+                    <button className="wl-arow" key={a.slug} onClick={() => openArticle(a.slug)}>
+                      <span className="wl-atitle">{a.title}</span>
+                      <span className="wl-atime">3 мин</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="artblock">
-              <div className="eyebrow" style={{ color: "var(--violet)" }}>Бесплатные статьи по брендингу</div>
-              <div className="artlist">
-                {ARTICLES.map((a) => (
-                  <button className="artitem" key={a.slug} onClick={() => openArticle(a.slug)}>
-                    <span className="artititle">{a.title}</span>
-                    <span className="artidesc">{a.description}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="foot">Бета · вход только для сохранения прогресса</div>
           </div>
         )}
 
