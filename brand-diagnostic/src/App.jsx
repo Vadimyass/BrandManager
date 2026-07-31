@@ -148,7 +148,7 @@ function Quotes() {
   );
 }
 
-function Deck({ questions, onDone }) {
+function Deck({ questions, onDone, label, hint }) {
   const [idx, setIdx] = useState(0);
   const [exiting, setExiting] = useState(null);
   const [drag, setDrag] = useState(null);
@@ -204,10 +204,11 @@ function Deck({ questions, onDone }) {
         {c.rows && (
           <div className="optrow">
             <button className="opt l" onClick={() => isTop && commit(c.left, -1)}>
-              <span className="side">← вариант А</span>{c.left}
+              <span className="side">Вариант А</span>{c.left}
             </button>
+            <span className="optor">или</span>
             <button className="opt r" onClick={() => isTop && commit(c.right, 1)}>
-              <span className="side">вариант Б →</span>{c.right}
+              <span className="side">Вариант Б</span>{c.right}
             </button>
           </div>
         )}
@@ -241,15 +242,24 @@ function Deck({ questions, onDone }) {
     );
   });
 
+  const n = Math.min(idx + 1, questions.length);
   return (
-    <div>
-      <div className="bar"><div className="fill" style={{ width: `${(idx / questions.length) * 100}%` }} /></div>
-      <div className="qnum">{String(Math.min(idx + 1, questions.length)).padStart(2, "0")} / {String(questions.length).padStart(2, "0")} · свайп или тап по варианту</div>
+    <div className={"deckwrap" + (label ? " deck-dilemma" : "")}>
+      <div className="deckhead">
+        <span className="deckcount">{label ? label(n, questions.length) : `${String(n).padStart(2, "0")} / ${String(questions.length).padStart(2, "0")}`}</span>
+        <div className="bar"><div className="fill" style={{ width: `${(idx / questions.length) * 100}%` }} /></div>
+      </div>
       <div className="deck">{stack}</div>
       {card && !card.rows && (
         <div className="deckbtns">
           <button className="dbtn no" onClick={() => commit(card.left, -1)}>{card.left}</button>
           <button className="dbtn yes" onClick={() => commit(card.right, 1)}>{card.right}</button>
+        </div>
+      )}
+      {hint && (
+        <div className="deckhint">
+          <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="dhmasc" />
+          <span>{hint}</span>
         </div>
       )}
     </div>
@@ -540,7 +550,7 @@ export default function App() {
     <div className="bd">
       <style>{CSS}</style>
       <div className="blob a" /><div className="blob b" />
-      <div className={"wrap" + (["welcome", "result", "niche", "intro"].includes(phase) ? " wrap-wide" : "")}>
+      <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs"].includes(phase) ? " wrap-wide" : "")}>
 
         {phase !== "welcome" && (
           <div className="topbar">
@@ -736,12 +746,17 @@ export default function App() {
         {phase === "tradeoffs" && tradeoffs.length > 0 && (
           <div className="phase">
             {calibration && (
-              <div className="share" style={{ marginBottom: 16, marginTop: 0 }}>
+              <div className="share" style={{ marginBottom: 16, marginTop: 0, justifyContent: "center" }}>
                 <span className="pill">Похоже на: {calibration.industry} · {calibration.model}</span>
                 <span className="pill">Метрика ниши: {calibration.key_metric}</span>
               </div>
             )}
-            <Deck questions={tradeoffs} onDone={onTradeoffsDone} />
+            <Deck
+              questions={tradeoffs}
+              onDone={onTradeoffsDone}
+              label={(i, t) => `Дилемма ${i} из ${t}`}
+              hint="Здесь нет правильных ответов — только твои приоритеты."
+            />
           </div>
         )}
 

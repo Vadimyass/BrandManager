@@ -110,6 +110,26 @@ export const CSS = `
 .bd .bar{height:4px;border-radius:2px;background:var(--line);margin-bottom:30px;overflow:hidden}
 .bd .bar .fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--violet),var(--amber));transition:width .35s cubic-bezier(.2,.8,.2,1)}
 .bd .deck{position:relative;height:min(380px,58vh);margin:10px 0 22px;touch-action:pan-y}
+.bd .deckhead{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.bd .deckcount{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;letter-spacing:.04em}
+.bd .deckhead .bar{flex:1;margin-bottom:0}
+.bd .optor{display:none}
+.bd .deckhint{display:flex;align-items:center;gap:12px;margin-top:24px;max-width:460px}
+.bd .dhmasc{width:56px;height:auto;flex:none}
+.bd .deckhint span{font-size:14px;line-height:1.5;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.bd .deck-dilemma{max-width:940px;margin:0 auto}
+@media(min-width:760px){
+  .bd .deck-dilemma .deck{height:auto;position:static;margin:0}
+  .bd .deck-dilemma .scard{position:static;inset:auto;background:transparent;border:none;box-shadow:none;padding:0;cursor:default;gap:0}
+  .bd .deck-dilemma .scard.behind1,.bd .deck-dilemma .scard.behind2,.bd .deck-dilemma .scard.fly,.bd .deck-dilemma .stamp{display:none}
+  .bd .deck-dilemma .ax{text-align:center;margin-bottom:6px}
+  .bd .deck-dilemma .cq{text-align:center;font-family:var(--body);font-weight:400;font-size:15px;color:var(--muted);margin:0 auto 26px;max-width:600px}
+  .bd .deck-dilemma .optrow{flex-direction:row;align-items:stretch;gap:0;margin-top:0}
+  .bd .deck-dilemma .opt{flex:1;min-height:230px;padding:28px;border-radius:20px;background:var(--surface);border:1px solid var(--line);font-family:var(--disp);font-weight:600;font-size:22px;line-height:1.25;letter-spacing:-.01em;color:var(--ink);display:flex;flex-direction:column;gap:12px}
+  .bd .deck-dilemma .opt:hover{transform:translateY(-3px);border-color:var(--amber)}
+  .bd .deck-dilemma .opt .side{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted-d);text-transform:uppercase}
+  .bd .deck-dilemma .optor{display:flex;align-items:center;justify-content:center;width:64px;flex:none;color:var(--muted-d);font-size:14px}
+}
 .bd .scard{position:absolute;inset:0;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:clamp(22px,5vw,36px);display:flex;flex-direction:column;justify-content:center;gap:12px;box-shadow:0 24px 60px rgba(22,23,43,.10);will-change:transform;user-select:none;cursor:grab;transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .3s}
 .bd .scard:active{cursor:grabbing}
 .bd .scard.drag{transition:none}
