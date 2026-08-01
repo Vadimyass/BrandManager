@@ -63,6 +63,11 @@ export const CSS = `
 .bd .tbtn{font-family:var(--body);font-size:13px;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,0.055);color:var(--ink);cursor:pointer;transition:all .15s}
 .bd .tbtn:hover{border-color:var(--ink)}
 .bd .tbtn.ghost{background:transparent;color:var(--muted)}
+.bd .langsw{display:inline-flex;gap:2px;padding:3px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,0.04);margin-right:auto}
+.bd .langsw-b{font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.02em;padding:5px 10px;border-radius:999px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.bd .langsw-b:hover{color:var(--ink)}
+.bd .langsw-b.on{background:var(--amber);color:#0F1420}
+.bd .wl-brand .langsw{margin-left:auto;margin-right:0}
 .bd .phase{animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .bd .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet)}

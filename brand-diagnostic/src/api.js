@@ -1,3 +1,5 @@
+import { getLang } from "./i18n.js";
+
 const BASE = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -9,7 +11,7 @@ async function post(route, body) {
       Authorization: `Bearer ${KEY}`,
       apikey: KEY,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ lang: getLang(), ...body }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

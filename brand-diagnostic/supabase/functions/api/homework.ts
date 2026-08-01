@@ -1,5 +1,5 @@
 import { llmJson, type LlmUsage } from "./llm.ts";
-import type { Calibration } from "./agents.ts";
+import { type Calibration, langRule } from "./agents.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // СТАТИЧНАЯ ШКАЛА ОЦЕНИВАНИЯ. Это то, что заполняет Vadim.
@@ -107,6 +107,7 @@ export async function gradeHomework(
   cal: Calibration,
   niche: string | undefined,
   usage: LlmUsage[],
+  lang?: string,
 ): Promise<GradeResult> {
   const criteriaText = homework.criteria
     .map((c, i) => `${i + 1}. «${c.label}» (макс ${c.points}${c.hint ? `; выполнено, если: ${c.hint}` : ""})`)
@@ -131,7 +132,7 @@ ${criteriaText}
 
   const res = await llmJson<{ breakdown: { label: string; awarded: number; note: string }[]; comment: string }>(
     "validator",
-    system,
+    system + langRule(lang),
     `Ответ ученика:\n${submission}`,
     usage,
     600,

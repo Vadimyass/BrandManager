@@ -151,24 +151,30 @@ export function decisionLog(payload: {
   return lines.join("\n");
 }
 
-export function runCalibrator(seed: SeedAnswer[], name: string | undefined, niche: string | undefined, usage: LlmUsage[]): Promise<Calibration> {
-  return llmJson<Calibration>("gate", CALIBRATOR_SYSTEM, seedLog(seed, name, niche), usage, 250);
+// Директива языка вывода. JSON-ключи не трогаем, локализуем только значения-тексты.
+export function langRule(lang?: string): string {
+  const name = lang === "ru" ? "русском" : lang === "en" ? "English (US)" : "украинском";
+  return `\n\nЯЗЫК ОТВЕТА: пиши ВЕСЬ видимый пользователю текст (значения полей) на ${name} языке. Ключи JSON оставляй как в схеме.`;
 }
 
-export async function runGenerator(cal: Calibration, seed: SeedAnswer[], name: string | undefined, niche: string | undefined, usage: LlmUsage[]): Promise<TradeoffCard[]> {
-  const res = await llmJson<{ cards: TradeoffCard[] }>("assessor", generatorSystem(cal), seedLog(seed, name, niche), usage, 1600);
+export function runCalibrator(seed: SeedAnswer[], name: string | undefined, niche: string | undefined, usage: LlmUsage[], lang?: string): Promise<Calibration> {
+  return llmJson<Calibration>("gate", CALIBRATOR_SYSTEM + langRule(lang), seedLog(seed, name, niche), usage, 250);
+}
+
+export async function runGenerator(cal: Calibration, seed: SeedAnswer[], name: string | undefined, niche: string | undefined, usage: LlmUsage[], lang?: string): Promise<TradeoffCard[]> {
+  const res = await llmJson<{ cards: TradeoffCard[] }>("assessor", generatorSystem(cal) + langRule(lang), seedLog(seed, name, niche), usage, 1600);
   return (res.cards ?? [])
     .filter((c) => c?.situation && c?.left && c?.right && AXES_KEYS.includes(c.leftAxis) && AXES_KEYS.includes(c.rightAxis))
     .slice(0, 7)
     .map((c, i) => ({ ...c, id: `t${i}` }));
 }
 
-export function runDiagnost(log: string, usage: LlmUsage[], rejectionIssues?: string[]): Promise<Diagnosis> {
+export function runDiagnost(log: string, usage: LlmUsage[], rejectionIssues?: string[], lang?: string): Promise<Diagnosis> {
   let user = log;
   if (rejectionIssues?.length) {
     user += `\n\nПредыдущий диагноз отклонён валидатором:\n- ${rejectionIssues.join("\n- ")}\nСделай новый, устранив проблемы.`;
   }
-  return llmJson<Diagnosis>("assessor", DIAGNOST_SYSTEM, user, usage, 1200);
+  return llmJson<Diagnosis>("assessor", DIAGNOST_SYSTEM + langRule(lang), user, usage, 1200);
 }
 
 export function runDiagValidator(log: string, diagnosis: Diagnosis, usage: LlmUsage[]): Promise<ValidationResult> {
@@ -176,8 +182,8 @@ export function runDiagValidator(log: string, diagnosis: Diagnosis, usage: LlmUs
   return llmJson<ValidationResult>("validator", VALIDATOR_SYSTEM, user, usage, 500);
 }
 
-export async function runMethodist(diagnosis: Diagnosis, cal: Calibration, usage: LlmUsage[]): Promise<Sprint[]> {
+export async function runMethodist(diagnosis: Diagnosis, cal: Calibration, usage: LlmUsage[], lang?: string): Promise<Sprint[]> {
   const user = `Диагноз: ${diagnosis.diagnosis}\nСлабое место: ${diagnosis.weakness.title} (${AXIS_NAMES[diagnosis.weakness.axis] ?? diagnosis.weakness.axis}) — ${diagnosis.weakness.note}`;
-  const res = await llmJson<{ sprints: Sprint[] }>("assessor", methodistSystem(cal), user, usage, 700);
+  const res = await llmJson<{ sprints: Sprint[] }>("assessor", methodistSystem(cal) + langRule(lang), user, usage, 700);
   return (res.sprints ?? []).filter((s) => s?.title).slice(0, 3);
 }

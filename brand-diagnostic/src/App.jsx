@@ -7,6 +7,7 @@ import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
 import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
+import { getLang, LANGS, setLang, t } from "./i18n.js";
 import { CSS } from "./styles.js";
 
 const FLY_MS = 420;
@@ -27,6 +28,23 @@ const QUOTES = [
 
 function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+function LangSwitch() {
+  const cur = getLang();
+  return (
+    <div className="langsw">
+      {LANGS.map((l) => (
+        <button
+          key={l.code}
+          className={"langsw-b" + (l.code === cur ? " on" : "")}
+          onClick={() => l.code !== cur && setLang(l.code)}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // Маскот Melyo — хамелеон (картинка дизайнера).
@@ -51,7 +69,7 @@ function FlowBar({ phase }) {
       <div className="dots5">
         {FLOW.map((_, i) => <span key={i} className={"d5" + (i <= idx ? " on" : "")} />)}
       </div>
-      <div className="stepnum">Шаг {idx + 1} из {FLOW.length}</div>
+      <div className="stepnum">{t("step_of")} {idx + 1} {t("step_of2")} {FLOW.length}</div>
     </div>
   );
 }
@@ -585,47 +603,48 @@ export default function App() {
 
         {phase !== "welcome" && (
           <div className="topbar">
+            <LangSwitch />
             {user ? (
               <>
-                <button className="tbtn" onClick={() => { setPrevPhase(phase); setPhase("cabinet"); }}>Кабинет</button>
-                <button className="tbtn ghost" onClick={() => signOut()}>Выйти</button>
+                <button className="tbtn" onClick={() => { setPrevPhase(phase); setPhase("cabinet"); }}>{t("cabinet")}</button>
+                <button className="tbtn ghost" onClick={() => signOut()}>{t("logout")}</button>
               </>
             ) : (
-              <button className="tbtn" onClick={() => signInWithGoogle()}>Войти</button>
+              <button className="tbtn" onClick={() => signInWithGoogle()}>{t("login")}</button>
             )}
           </div>
         )}
 
         {phase === "welcome" && (
           <div className="phase wl">
-            <div className="wl-brand"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="wl-brandimg" /><span>melyo</span></div>
+            <div className="wl-brand"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="wl-brandimg" /><span>melyo</span><LangSwitch /></div>
 
             <div className="wl-grid">
               <div className="wl-left">
                 <div className="wl-hero">
                   <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Маскот Melyo" className="wl-mascot" />
-                  <div className="wl-bubble">Десять дилемм — и я скажу, где у твоего бизнеса дыра.</div>
+                  <div className="wl-bubble">{t("wl_bubble")}</div>
                 </div>
-                <h1 className="wl-h1">Найди свою суперсилу в бизнесе за 5 минут</h1>
-                <p className="wl-sub">Не тест с правильными ответами, а колода дилемм «или-или». Ты выбираешь, чем жертвуешь — я показываю слепую зону и собираю план обучения.</p>
+                <h1 className="wl-h1">{t("wl_h1")}</h1>
+                <p className="wl-sub">{t("wl_sub")}</p>
                 <div className="wl-stats">
-                  <div className="wl-stat"><b>10</b><span>дилемм</span></div>
-                  <div className="wl-stat"><b>5</b><span>мини-курсов</span></div>
-                  <div className="wl-stat"><b>4</b><span>минуты на урок</span></div>
+                  <div className="wl-stat"><b>10</b><span>{t("wl_dilemmas")}</span></div>
+                  <div className="wl-stat"><b>5</b><span>{t("wl_minicourses")}</span></div>
+                  <div className="wl-stat"><b>4</b><span>{t("wl_minlesson")}</span></div>
                 </div>
               </div>
 
               <div className="wl-right">
-                <h2 className="wl-h2">Начнём</h2>
-                <p className="wl-note">Результат диагностики сохраним в твой профиль.</p>
+                <h2 className="wl-h2">{t("wl_begin")}</h2>
+                <p className="wl-note">{t("wl_savenote")}</p>
                 <button className="gbtn" onClick={() => { track("login_clicked", { from: "welcome" }); signInWithGoogle(); }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"/><path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 010-4.18V7.07H2.18a11 11 0 000 9.86l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
-                  Войти через Google
+                  {t("wl_google")}
                 </button>
-                <button className="gbtn ghost" onClick={() => { track("guest_chosen"); setPhase("intro"); }}>Продолжить гостем</button>
-                <p className="wl-fine">Гостевой прогресс живёт в этом браузере — вход можно добавить позже.</p>
+                <button className="gbtn ghost" onClick={() => { track("guest_chosen"); setPhase("intro"); }}>{t("wl_guest")}</button>
+                <p className="wl-fine">{t("wl_fine")}</p>
 
-                <div className="wl-or"><span>или почитать бесплатно</span></div>
+                <div className="wl-or"><span>{t("wl_orread")}</span></div>
                 <div className="wl-articles">
                   {ARTICLES.map((a) => (
                     <button className="wl-arow" key={a.slug} onClick={() => openArticle(a.slug)}>
@@ -737,11 +756,11 @@ export default function App() {
           <div className="phase screen">
             <FlowBar phase="intro" />
             <Mascot size={110} />
-            <h2 className="scr-h" style={{ marginTop: 14 }}>Как называется твой проект?</h2>
-            <p className="scr-sub">Необязательно — но так разбор будет обращаться к нему по имени.</p>
-            <input className="field" style={{ maxWidth: 360, textAlign: "center" }} placeholder="Название проекта" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btnp" style={{ marginTop: 18 }} onClick={() => setPhase("niche")}>Начать</button>
-            <button className="btnlink" onClick={() => setPhase("welcome")}>Назад</button>
+            <h2 className="scr-h" style={{ marginTop: 14 }}>{t("ob_name_q")}</h2>
+            <p className="scr-sub">{t("ob_name_sub")}</p>
+            <input className="field" style={{ maxWidth: 360, textAlign: "center" }} placeholder={t("ob_name_ph")} value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btnp" style={{ marginTop: 18 }} onClick={() => setPhase("niche")}>{t("start")}</button>
+            <button className="btnlink" onClick={() => setPhase("welcome")}>{t("back")}</button>
           </div>
         )}
 
@@ -749,7 +768,7 @@ export default function App() {
           <div className="phase screen">
             <FlowBar phase="niche" />
             <Mascot />
-            <h2 className="scr-h">Чем занимаешься?</h2>
+            <h2 className="scr-h">{t("ob_niche_q")}</h2>
             <div className="tiles">
               {NICHE_OPTIONS.map((o) => (
                 <button key={o} className={"tile" + (niche === o ? " on" : "")} onClick={() => setNiche(o)}>

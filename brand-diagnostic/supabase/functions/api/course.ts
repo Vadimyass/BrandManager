@@ -1,5 +1,5 @@
 import { llmJson, type LlmUsage } from "./llm.ts";
-import { AXIS_NAMES, type Calibration, type Diagnosis } from "./agents.ts";
+import { AXIS_NAMES, type Calibration, type Diagnosis, langRule } from "./agents.ts";
 
 export interface QuizItem {
   q: string;
@@ -151,13 +151,14 @@ export async function runCourse(
   niche: string | undefined,
   diagnosis: Diagnosis,
   usage: LlmUsage[],
+  lang?: string,
 ): Promise<Lesson[]> {
   const plan = planFor(axis);
   const out: Lesson[] = [];
   for (let i = 0; i < plan.length; i += CONCURRENCY) {
     const batch = plan.slice(i, i + CONCURRENCY);
     const done = await Promise.all(
-      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage)),
+      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang)),
     );
     out.push(...done);
   }
@@ -171,6 +172,7 @@ export async function runLesson(
   niche: string | undefined,
   diagnosis: Diagnosis,
   usage: LlmUsage[],
+  lang?: string,
 ): Promise<Lesson> {
   const plan = planFor(axis);
   const total = plan.length;
@@ -179,7 +181,7 @@ export async function runLesson(
 
   const lesson = await llmJson<Lesson>(
     "assessor",
-    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }),
+    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }) + langRule(lang),
     `Диагноз фаундера: ${diagnosis.diagnosis}`,
     usage,
     1600,

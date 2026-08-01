@@ -66,14 +66,14 @@ Deno.serve(async (req) => {
   }
 });
 
-async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string }) {
-  const { seedAnswers, name, niche } = body;
+async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string; lang?: string }) {
+  const { seedAnswers, name, niche, lang } = body;
   if (!seedAnswers?.length || seedAnswers.length < 2) throw new Error("seed answers incomplete");
 
   const usage: LlmUsage[] = [];
-  const calibration = await runCalibrator(seedAnswers, name, niche, usage);
-  let cards = await runGenerator(calibration, seedAnswers, name, niche, usage);
-  if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, niche, usage);
+  const calibration = await runCalibrator(seedAnswers, name, niche, usage, lang);
+  let cards = await runGenerator(calibration, seedAnswers, name, niche, usage, lang);
+  if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, niche, usage, lang);
   if (cards.length < 5) throw new Error("deck generation failed");
 
   return { status: "ok", calibration, cards, usage };
@@ -83,6 +83,7 @@ interface DiagnosePayload {
   name?: string;
   niche?: string;
   version?: string;
+  lang?: string;
   seedAnswers: SeedAnswer[];
   calibration: Calibration;
   decisions: Decision[];
@@ -96,18 +97,19 @@ async function diagnose(body: DiagnosePayload) {
   const started = Date.now();
   const usage: LlmUsage[] = [...(body.deckUsage ?? [])];
   const log = decisionLog(body);
+  const lang = body.lang;
 
-  let diagnosis = await runDiagnost(log, usage);
+  let diagnosis = await runDiagnost(log, usage, undefined, lang);
   let validation = await runDiagValidator(log, diagnosis, usage);
   let retried = false;
   if (!validation.approved) {
     retried = true;
-    diagnosis = await runDiagnost(log, usage, validation.issues);
+    diagnosis = await runDiagnost(log, usage, validation.issues, lang);
     validation = await runDiagValidator(log, diagnosis, usage);
   }
   normalizeDiagnosis(diagnosis);
 
-  const sprints = await runMethodist(diagnosis, body.calibration, usage);
+  const sprints = await runMethodist(diagnosis, body.calibration, usage, lang);
 
   const { data, error } = await db
     .from("diagnostics")
@@ -125,11 +127,11 @@ async function diagnose(body: DiagnosePayload) {
   return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
 }
 
-async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis }) {
+async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis; lang?: string }) {
   if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
   const usage: LlmUsage[] = [];
   const axis = body.diagnosis.weakness.axis;
-  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage);
+  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage, body.lang);
   return { status: "ok", lessons, total: courseLength(axis) };
 }
 
@@ -147,12 +149,12 @@ async function track(body: { sessionId: string; name: string; props?: unknown; n
   return { status: "ok" };
 }
 
-async function grade(body: { axis: string; index: number; task: string; submission: string; calibration: Calibration; niche?: string }) {
+async function grade(body: { axis: string; index: number; task: string; submission: string; calibration: Calibration; niche?: string; lang?: string }) {
   const submission = (body.submission ?? "").trim();
   if (submission.length < 3) throw new Error("empty submission");
   const usage: LlmUsage[] = [];
   const hw = homeworkFor(body.axis, body.index ?? 0, body.task ?? "");
-  const result = await gradeHomework(hw, submission, body.calibration, body.niche, usage);
+  const result = await gradeHomework(hw, submission, body.calibration, body.niche, usage, body.lang);
   return { status: "ok", ...result, max: 10 };
 }
 
