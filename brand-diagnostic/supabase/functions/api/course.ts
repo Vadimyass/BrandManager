@@ -18,6 +18,7 @@ export interface Lesson {
   index: number;
   total: number;
   title: string;
+  summary: string;
   stat: string;
   statNote: string;
   body: string;
@@ -29,6 +30,7 @@ export interface Lesson {
   task: string;
   quiz: QuizItem[];
   takeaway: string;
+  relevance: string;
 }
 
 type Depth = "intro" | "core" | "advanced";
@@ -134,12 +136,14 @@ ${PLAIN_LANGUAGE_RULE}
 - ИСТОРИИ: главная история урока — из блока ниже, с её цифрами (в body). Дополнительно в examples можешь дать 1–2 КОРОТКИХ примера других известных брендов — но БЕЗ конкретных цифр, только качественно (что сделали и почему сработало). Не бери примеры-штампы из других уроков (скидка блогера, бесплатный доступ, инвестор), если их нет в истории.
 - task — конкретное действие с ЕГО продуктом в ЕГО нише.
 - scheme — 2–4 коротких подписи стрелками, только если помогает; иначе [].
+- summary — ОБЯЗАТЕЛЬНО, одна фраза «про что этот урок», простыми словами, до 90 знаков.
 - takeaway — ОБЯЗАТЕЛЬНО, одна ёмкая строка-вывод именно этого урока.
+- relevance — ОБЯЗАТЕЛЬНО, 1 предложение: как этот урок связан именно с его слабым местом «${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}» и что это ему даёт. Обращайся на «ты».
 
 ИСТОРИЯ (единственный источник фактов):
 ${plan.anchor}
 
-Верни ТОЛЬКО JSON: {"title":"заголовок урока, до 50 знаков","stat":"главная цифра истории, до 18 знаков","statNote":"что это за цифра, до 80 знаков","body":"по правилам уровня","turn":"суть в 1 предложении","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["подпись","подпись"],"examples":[{"case":"что случилось","why":"почему так вышло"}],"task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой"}`;
+Верни ТОЛЬКО JSON: {"title":"заголовок урока, до 50 знаков","summary":"про что урок, до 90 знаков","stat":"главная цифра истории, до 18 знаков","statNote":"что это за цифра, до 80 знаков","body":"по правилам уровня","turn":"суть в 1 предложении","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["подпись","подпись"],"examples":[{"case":"что случилось","why":"почему так вышло"}],"task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой","relevance":"как связано с его слабым местом"}`;
 }
 
 // Параллельность ограничена (по 2): бесплатные модели упираются в лимит провайдера.
@@ -191,7 +195,10 @@ export async function runLesson(
   lesson.total = total;
   lesson.term = lesson.term || plan[i].term;
   lesson.title = lesson.title || plan[i].term;
+  lesson.summary = (lesson.summary && String(lesson.summary).trim()) || plan[i].focus;
   lesson.takeaway = (lesson.takeaway && String(lesson.takeaway).trim()) || plan[i].focus;
+  lesson.relevance = (lesson.relevance && String(lesson.relevance).trim())
+    || `Это закрывает твоё слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}.`;
   lesson.scheme = Array.isArray(lesson.scheme)
     ? lesson.scheme.filter((x) => typeof x === "string" && x.trim()).slice(0, 4)
     : [];

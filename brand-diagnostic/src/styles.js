@@ -292,6 +292,48 @@ export const CSS = `
 .bd .tstatnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:46ch}
 .bd .tbody{font-size:16.5px;line-height:1.65;margin:0 0 14px;max-width:58ch}
 .bd .tturn{font-size:16.5px;line-height:1.65;margin:0;padding-left:16px;border-left:2px solid var(--amber);max-width:58ch}
+/* Строгая иерархия урока: номер (крупно) → про что → лид → текст → итог+связь */
+.bd .lsn-num{font-family:var(--disp);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;letter-spacing:-.03em;color:var(--amber);margin:0 0 8px}
+.bd .lsn-about{font-family:var(--disp);font-weight:700;font-size:clamp(20px,2.6vw,28px);line-height:1.15;letter-spacing:-.02em;color:var(--ink);margin:0 0 10px}
+.bd .lsn-lead{font-size:15px;line-height:1.5;color:var(--muted);margin:0 0 18px;max-width:56ch}
+.bd .lsn-text{font-size:15px;line-height:1.7;color:var(--ink);margin:0 0 14px;max-width:60ch;opacity:.92}
+.bd .lsn-outcome{margin-top:22px;padding:18px 20px;background:rgba(45,212,191,.07);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:16px}
+.bd .lsn-take{font-family:var(--disp);font-weight:600;font-size:clamp(17px,2.2vw,21px);line-height:1.3;letter-spacing:-.01em;color:var(--ink);margin-top:4px}
+.bd .lsn-rel{font-size:14px;line-height:1.55;color:var(--muted);margin-top:10px}
+.bd .lsn-rel-mk{color:var(--amber);font-weight:600}
+/* Подытог квиза */
+.bd .recap{max-width:640px;margin:0 auto;animation:fadeUp .4s both}
+.bd .recap-score{display:flex;align-items:baseline;gap:12px;margin:8px 0 18px}
+.bd .recap-num{font-family:var(--disp);font-weight:800;font-size:clamp(40px,9vw,64px);line-height:1;letter-spacing:-.03em;color:var(--amber)}
+.bd .recap-den{color:var(--muted);font-size:.5em;font-weight:600}
+.bd .recap-lbl{font-size:15px;color:var(--muted)}
+.bd .recap-card{padding:18px 20px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;margin-bottom:16px}
+.bd .recap-take{font-family:var(--disp);font-weight:600;font-size:clamp(17px,2.2vw,21px);line-height:1.3;color:var(--ink);margin-top:4px}
+.bd .recap-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.bd .recap-row{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.45;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}
+.bd .recap-row.ok{background:rgba(45,212,191,.08)}
+.bd .recap-row.miss{background:rgba(224,115,106,.08)}
+.bd .recap-mk{font-weight:800;flex:none}
+.bd .recap-row.ok .recap-mk{color:var(--amber)}
+.bd .recap-row.miss .recap-mk{color:var(--no)}
+/* История уроков в кабинете */
+.bd .histlist{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.bd .histitem{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.bd .histitem.open{border-color:var(--amber)}
+.bd .histhead{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;background:transparent;border:none;cursor:pointer;text-align:left;color:var(--ink)}
+.bd .histnum{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--violet);flex:none}
+.bd .histtitle{font-size:14.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd .histmeta{display:flex;align-items:center;gap:6px;flex:none}
+.bd .histbadge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.bd .histbadge.amber{color:var(--amber);border-color:rgba(45,212,191,.4)}
+.bd .histchev{color:var(--muted);margin-left:2px}
+.bd .histbody{padding:4px 14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:14px}
+.bd .histtake{font-size:15px;line-height:1.4;color:var(--ink);padding-top:12px}
+.bd .histsec{display:flex;flex-direction:column;gap:6px}
+.bd .histtask{font-size:13.5px;color:var(--muted);line-height:1.5}
+.bd .histsub{font-size:14px;line-height:1.55;color:var(--ink);padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px}
+.bd .histscore{font-size:14px;font-weight:600;color:var(--amber)}
+.bd .histcomment{font-size:13.5px;color:var(--muted);line-height:1.5}
 .bd .tq{font-family:var(--disp);font-weight:600;font-size:clamp(19px,3.4vw,24px);letter-spacing:-.01em;margin:22px 0 8px}
 .bd .tlesson{font-size:15px;color:var(--muted);line-height:1.55;max-width:52ch}
 /* Оффер: десктоп 2 колонки (контент | карточка покупки) */

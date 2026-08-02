@@ -131,13 +131,15 @@ function BuildProgress() {
 function Quiz({ items, onDone }) {
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState(null);
+  const resultsRef = useRef([]);
   const item = items[i];
   if (!item) return null;
 
   const isRight = picked && picked === item.correct;
   const next = () => {
+    resultsRef.current[i] = { q: item.q, picked, correct: item.correct, ok: picked === item.correct };
     setPicked(null);
-    if (i + 1 >= items.length) onDone();
+    if (i + 1 >= items.length) onDone(resultsRef.current);
     else setI(i + 1);
   };
 
@@ -343,6 +345,8 @@ export default function App() {
   const [grade, setGrade] = useState(null);
   const [grading, setGrading] = useState(false);
   const [shared, setShared] = useState(false);
+  const [quizResult, setQuizResult] = useState(null);
+  const [historyIdx, setHistoryIdx] = useState(null);
   const lesson = lessons?.[lessonIndex] ?? null;
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -402,15 +406,26 @@ export default function App() {
     });
   }
 
-  // Докуда дошёл в курсе: каждое открытие урока — событие с номером и всего.
+  // Открытие урока — только аналитика. maxLesson НЕ трогаем здесь:
+  // иначе простой просмотр «докручивал» прогресс и «Продолжить» перескакивал уроки.
   useEffect(() => {
     if (phase === "lesson" && lessons?.[lessonIndex]) {
       const total = courseTotal || lessons[lessonIndex].total;
       track("lesson_viewed", { index: lessonIndex, human: lessonIndex + 1, total });
-      if (lessonIndex + 1 >= total) track("course_completed", { total });
-      persist({ courseAxis: result?.weakness?.axis, total, maxLesson: Math.max(progress?.maxLesson ?? 0, lessonIndex + 1) });
+      persist({ courseAxis: result?.weakness?.axis, total });
     }
   }, [phase, lessonIndex]);
+
+  // maxLesson = число реально ЗАВЕРШЁННЫХ уроков. Растёт только при доходе до «done».
+  useEffect(() => {
+    if (phase === "lesson" && lessonStage === "done" && lesson) {
+      const total = courseTotal || lesson.total;
+      const completed = Math.max(progress?.maxLesson ?? 0, lesson.index + 1);
+      if (completed >= total) track("course_completed", { total });
+      persist({ maxLesson: completed });
+      saveLessonLog(lesson.index, { title: lesson.title, completedAt: new Date().toISOString() });
+    }
+  }, [phase, lessonStage]);
 
   async function guard(fn) {
     lastAction.current = fn;
@@ -499,8 +514,30 @@ export default function App() {
     if (!lessons?.[index]) return;
     setLessonIndex(index);
     setLessonStage("read");
-    setSubmission(""); setGrade(null); setGrading(false);
+    setSubmission(""); setGrade(null); setGrading(false); setQuizResult(null);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // История урока в кабинете: сливаем патч в progress.lessonLog[index].
+  function saveLessonLog(index, patch) {
+    const prevLog = progress?.lessonLog || {};
+    const merged = { ...(prevLog[index] || {}), ...patch };
+    persist({ lessonLog: { ...prevLog, [index]: merged } });
+  }
+
+  function onQuizDone(results) {
+    const items = (results || []).filter(Boolean);
+    const correct = items.filter((r) => r.ok).length;
+    setQuizResult({ correct, total: items.length, items });
+    saveLessonLog(lesson.index, {
+      title: lesson.title,
+      term: lesson.term,
+      takeaway: lesson.takeaway,
+      quiz: items,
+      quizCorrect: correct,
+      quizTotal: items.length,
+    });
+    setLessonStage("recap");
   }
 
   async function submitHomework() {
@@ -511,6 +548,11 @@ export default function App() {
       setGrade(res);
       track("homework_graded", { index: lesson.index, score: res?.total });
       persist({ homework: { ...(progress?.homework || {}), [lesson.index]: res?.total } });
+      saveLessonLog(lesson.index, {
+        title: lesson.title,
+        task: lesson.task,
+        homework: { submission, total: res?.total, max: res?.max ?? 10, comment: res?.comment ?? "" },
+      });
     } catch (e) {
       setGrade({ error: String(e?.message ?? e) });
     } finally {
@@ -553,7 +595,7 @@ export default function App() {
     clearSession();
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
-    setSubmission(""); setGrade(null); setGrading(false); setShared(false);
+    setSubmission(""); setGrade(null); setGrading(false); setShared(false); setQuizResult(null); setHistoryIdx(null);
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -729,22 +771,68 @@ export default function App() {
                   )}
                 </div>
 
-                {progress.homework && Object.keys(progress.homework).length > 0 && (
+                {progress.lessonLog && Object.keys(progress.lessonLog).length > 0 && (
                   <div className="block">
-                    <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--amber)" }}>Домашки</h3>
-                    {Object.entries(progress.homework).sort((a, b) => a[0] - b[0]).map(([idx, sc]) => (
-                      <div className="planrow" key={idx} style={{ background: "transparent", color: "var(--ink)", borderColor: "var(--line)" }}>
-                        <span className="pnum" style={{ color: "var(--violet)" }}>Урок {Number(idx) + 1}</span>
-                        <span>{sc} / 10</span>
-                      </div>
-                    ))}
+                    <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--amber)" }}>История уроков</h3>
+                    <div className="histlist">
+                      {Object.entries(progress.lessonLog).sort((a, b) => a[0] - b[0]).map(([idx, log]) => {
+                        const i = Number(idx);
+                        const open = historyIdx === i;
+                        return (
+                          <div className={"histitem" + (open ? " open" : "")} key={idx}>
+                            <button className="histhead" onClick={() => setHistoryIdx(open ? null : i)}>
+                              <span className="histnum">Урок {i + 1}</span>
+                              <span className="histtitle">{log.title || log.term || ""}</span>
+                              <span className="histmeta">
+                                {log.quizTotal ? <span className="histbadge">квиз {log.quizCorrect}/{log.quizTotal}</span> : null}
+                                {log.homework?.total != null ? <span className="histbadge amber">дз {log.homework.total}/{log.homework.max || 10}</span> : null}
+                                <span className="histchev">{open ? "▾" : "▸"}</span>
+                              </span>
+                            </button>
+                            {open && (
+                              <div className="histbody">
+                                {log.takeaway && <div className="histtake">{log.takeaway}</div>}
+                                {log.quiz?.length > 0 && (
+                                  <div className="histsec">
+                                    <div className="eyebrow">Как ты ответил</div>
+                                    {log.quiz.map((r, qi) => (
+                                      <div className={"recap-row" + (r.ok ? " ok" : " miss")} key={qi}>
+                                        <span className="recap-mk">{r.ok ? "✓" : "✕"}</span>
+                                        <span className="recap-q">{r.q}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {log.homework && (
+                                  <div className="histsec">
+                                    <div className="eyebrow">Домашка</div>
+                                    {log.task && <div className="histtask">{log.task}</div>}
+                                    {log.homework.submission && <div className="histsub">«{log.homework.submission}»</div>}
+                                    {log.homework.total != null && <div className="histscore">Оценка: {log.homework.total} / {log.homework.max || 10}</div>}
+                                    {log.homework.comment && <div className="histcomment">{log.homework.comment}</div>}
+                                  </div>
+                                )}
+                                {lessons?.[i] && (
+                                  <button className="btnlink" onClick={() => { goToLesson(i); setPhase("lesson"); }}>Открыть урок заново →</button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
                 <div className="nav">
                   <button className="btn ghost" onClick={() => setPhase("intro")}>Новая диагностика</button>
                   {result && Object.keys(lessons).length > 0 && (
-                    <button className="btn amber" onClick={() => { setLessonIndex(Math.min(progress.maxLesson || 0, (courseTotal || 1) - 1)); setLessonStage("read"); setPhase("lesson"); }}>Продолжить курс</button>
+                    <button className="btn amber" onClick={() => {
+                      const total = courseTotal || 1;
+                      const nextIdx = Math.min(progress.maxLesson || 0, total - 1);
+                      goToLesson(nextIdx);
+                      setPhase("lesson");
+                    }}>{(progress.maxLesson || 0) >= (courseTotal || 1) ? "Повторить курс" : "Продолжить курс"}</button>
                   )}
                 </div>
               </>
@@ -1054,7 +1142,7 @@ export default function App() {
         {phase === "lesson" && lesson && (
           <div className="phase">
             <div className="lsn-top">
-              <span className="deckcount">Урок {lesson.index + 1} из {courseTotal || lesson.total}{lesson.term ? ` · ${lesson.term}` : ""}</span>
+              <span className="deckcount">{lesson.index + 1} / {courseTotal || lesson.total}{lesson.term ? ` · ${lesson.term}` : ""}</span>
               <div className="bar"><div className="fill" style={{ width: `${((lesson.index + 1) / (courseTotal || lesson.total)) * 100}%` }} /></div>
             </div>
 
@@ -1091,10 +1179,13 @@ export default function App() {
                 </div>
 
                 <div className="lsn-main">
+                  <div className="lsn-num">Урок {lesson.index + 1}</div>
+                  <h1 className="lsn-about">{lesson.title}</h1>
+                  {lesson.summary && <p className="lsn-lead">{lesson.summary}</p>}
+
                   {lesson.stat && <div className="tstat">{lesson.stat}</div>}
                   {lesson.statNote && <div className="tstatnote">{lesson.statNote}</div>}
-                  <h1 className="lsn-h1">{lesson.title}</h1>
-                  <p className="tbody">{lesson.body}</p>
+                  <p className="lsn-text">{lesson.body}</p>
                   {lesson.turn && <p className="tturn">{lesson.turn}</p>}
 
                   <div className="termbox">
@@ -1110,6 +1201,14 @@ export default function App() {
                     </div>
                   )}
 
+                  <div className="lsn-outcome">
+                    <div className="eyebrow" style={{ color: "var(--amber)" }}>Итог урока</div>
+                    <div className="lsn-take">{lesson.takeaway}</div>
+                    {lesson.relevance && (
+                      <div className="lsn-rel"><span className="lsn-rel-mk">Зачем тебе это:</span> {lesson.relevance}</div>
+                    )}
+                  </div>
+
                   <div className="nav">
                     <button className="btnlink" onClick={() => setPhase("result")}>← К диагнозу</button>
                     <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
@@ -1121,7 +1220,38 @@ export default function App() {
             )}
 
             {lessonStage === "quiz" && (
-              <Quiz items={lesson.quiz} onDone={() => setLessonStage("homework")} />
+              <Quiz items={lesson.quiz} onDone={onQuizDone} />
+            )}
+
+            {lessonStage === "recap" && quizResult && (
+              <div className="recap">
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>Подытог урока</div>
+                <div className="recap-score">
+                  <span className="recap-num">{quizResult.correct}<span className="recap-den"> / {quizResult.total}</span></span>
+                  <span className="recap-lbl">{quizResult.correct === quizResult.total ? "верно, чисто!" : quizResult.correct === 0 ? "верно — не беда, теперь понятнее" : "верных ответов"}</span>
+                </div>
+                <div className="recap-card">
+                  <div className="eyebrow">Чему ты научился</div>
+                  <div className="recap-take">{lesson.takeaway}</div>
+                  {lesson.relevance && <div className="lsn-rel"><span className="lsn-rel-mk">Зачем тебе это:</span> {lesson.relevance}</div>}
+                </div>
+                {quizResult.items.length > 0 && (
+                  <div className="recap-list">
+                    {quizResult.items.map((r, i) => (
+                      <div className={"recap-row" + (r.ok ? " ok" : " miss")} key={i}>
+                        <span className="recap-mk">{r.ok ? "✓" : "✕"}</span>
+                        <span className="recap-q">{r.q}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="nav">
+                  <button className="btnlink" onClick={() => setLessonStage("read")}>← К уроку</button>
+                  <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.task ? "homework" : "done")}>
+                    {lesson.task ? "К заданию" : "Дальше"}
+                  </button>
+                </div>
+              </div>
             )}
 
             {lessonStage === "homework" && (
