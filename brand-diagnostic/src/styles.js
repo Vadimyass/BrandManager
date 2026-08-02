@@ -1,8 +1,8 @@
 export const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-/* Nocturne dark: тёмный сине-серый фон, один сине-фиолетовый акцент, Inter */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* Nocturne dark: тёмный сине-серый фон, один сине-фиолетовый акцент, Montserrat */
 .bd{--paper:#0F1420;--surface:#1B2130;--surface2:#242B3B;--ink:#EAECEF;--ink2:#242B3B;--bone:#EAECEF;--amber:#2DD4BF;--violet:#8B80E0;--muted:#8C93A3;--muted-d:#6A7180;--line:#2A3040;--line-d:#20263A;--no:#E0736A;
-  --disp:'Inter',system-ui,sans-serif;--body:'Inter',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  --disp:'Montserrat',system-ui,sans-serif;--body:'Montserrat',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
   font-family:var(--body);color:var(--ink);background:var(--paper);min-height:100vh;width:100%;box-sizing:border-box;padding:clamp(20px,5vw,56px);position:relative;overflow-x:hidden}
 .bd *{box-sizing:border-box}
 /* Текст никогда не вылезает за границы, в т.ч. длинные слова/ссылки на телефоне */
