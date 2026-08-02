@@ -157,7 +157,7 @@ function Quiz({ items, onDone }) {
   return (
     <div className="qz-grid">
       <div className="qz-left">
-        <div className="eyebrow" style={{ color: "var(--amber)" }}>Вопрос {i + 1} из {items.length}</div>
+        <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("quiz_question")} {i + 1} {t("step_of2")} {items.length}</div>
         <div className="qz-q">{item.q}</div>
         <div className="qz-opts">
           {opt("left")}
@@ -168,16 +168,16 @@ function Quiz({ items, onDone }) {
         <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="qz-masc" />
         {picked ? (
           <>
-            <div className={"qz-verdict" + (isRight ? " ok" : " miss")}>{isRight ? "Точно!" : "Смотри глубже"}</div>
+            <div className={"qz-verdict" + (isRight ? " ok" : " miss")}>{isRight ? t("quiz_right") : t("quiz_wrong")}</div>
             <div className="qz-explain">{item.explain}</div>
             <div className="qz-foot">
-              <span className={isRight ? "qz-xp" : "qz-xp off"}>{isRight ? "+15 XP за верный ответ" : "без очков"}</span>
+              <span className={isRight ? "qz-xp" : "qz-xp off"}>{isRight ? t("quiz_xp") : t("quiz_noxp")}</span>
               <span className="qz-cnt">{i + 1}/{items.length}</span>
             </div>
-            <button className="btnp" onClick={next}>{i + 1 >= items.length ? "Закончить урок" : "Следующий вопрос"}</button>
+            <button className="btnp" onClick={next}>{i + 1 >= items.length ? t("quiz_finish") : t("quiz_next")}</button>
           </>
         ) : (
-          <div className="qz-prompt">Выбери ответ слева — я скажу, попал ли ты, и почему.</div>
+          <div className="qz-prompt">{t("quiz_prompt")}</div>
         )}
       </div>
     </div>
@@ -1151,7 +1151,7 @@ export default function App() {
                 <div className="lsn-visual">
                   {lesson.scheme?.length > 1 && (
                     <div className="lsn-vcard">
-                      <div className="eyebrow" style={{ color: "var(--amber)" }}>Как это работает</div>
+                      <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_how")}</div>
                       <div className="scheme">
                         {lesson.scheme.map((sc, i) => (
                           <span className="schemepart" key={i}>
@@ -1164,11 +1164,11 @@ export default function App() {
                   )}
                   {lesson.examples?.length > 0 && (
                     <div className="lsn-vcard">
-                      <div className="eyebrow" style={{ color: "var(--violet)" }}>Разбор: почему так вышло</div>
+                      <div className="eyebrow" style={{ color: "var(--violet)" }}>{t("lsn_break")}</div>
                       {lesson.examples.map((ex, i) => (
                         <div className="example" key={i}>
                           <div className="excase">{ex.case}</div>
-                          <div className="exwhy"><span className="exmk">почему:</span> {ex.why}</div>
+                          <div className="exwhy"><span className="exmk">{t("lsn_why")}</span> {ex.why}</div>
                         </div>
                       ))}
                     </div>
@@ -1179,7 +1179,7 @@ export default function App() {
                 </div>
 
                 <div className="lsn-main">
-                  <div className="lsn-num">Урок {lesson.index + 1}</div>
+                  <div className="lsn-num">{t("word_lesson")} {lesson.index + 1}</div>
                   <h1 className="lsn-about">{lesson.title}</h1>
                   {lesson.summary && <p className="lsn-lead">{lesson.summary}</p>}
 
@@ -1189,30 +1189,30 @@ export default function App() {
                   {lesson.turn && <p className="tturn">{lesson.turn}</p>}
 
                   <div className="termbox">
-                    <div className="eyebrow" style={{ color: "var(--amber)" }}>Простыми словами</div>
+                    <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_plain")}</div>
                     <div className="termnote">{lesson.termNote}</div>
                     <span className="termtag">{lesson.term}</span>
                   </div>
 
                   {lesson.task && (
                     <div className="taskbox">
-                      <div className="eyebrow" style={{ color: "var(--amber)" }}>Сделай на своём продукте</div>
+                      <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_dothis")}</div>
                       <div className="tasktext">{lesson.task}</div>
                     </div>
                   )}
 
                   <div className="lsn-outcome">
-                    <div className="eyebrow" style={{ color: "var(--amber)" }}>Итог урока</div>
+                    <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_outcome")}</div>
                     <div className="lsn-take">{lesson.takeaway}</div>
                     {lesson.relevance && (
-                      <div className="lsn-rel"><span className="lsn-rel-mk">Зачем тебе это:</span> {lesson.relevance}</div>
+                      <div className="lsn-rel"><span className="lsn-rel-mk">{t("lsn_whyyou")}</span> {lesson.relevance}</div>
                     )}
                   </div>
 
                   <div className="nav">
-                    <button className="btnlink" onClick={() => setPhase("result")}>← К диагнозу</button>
+                    <button className="btnlink" onClick={() => setPhase("result")}>← {t("lsn_todiag")}</button>
                     <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
-                      {lesson.quiz?.length ? "К квизу" : "К заданию"}
+                      {lesson.quiz?.length ? t("lsn_toquiz") : t("lsn_totask")}
                     </button>
                   </div>
                 </div>
@@ -1225,15 +1225,15 @@ export default function App() {
 
             {lessonStage === "recap" && quizResult && (
               <div className="recap">
-                <div className="eyebrow" style={{ color: "var(--amber)" }}>Подытог урока</div>
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("recap_title")}</div>
                 <div className="recap-score">
                   <span className="recap-num">{quizResult.correct}<span className="recap-den"> / {quizResult.total}</span></span>
-                  <span className="recap-lbl">{quizResult.correct === quizResult.total ? "верно, чисто!" : quizResult.correct === 0 ? "верно — не беда, теперь понятнее" : "верных ответов"}</span>
+                  <span className="recap-lbl">{quizResult.correct === quizResult.total ? t("recap_full") : quizResult.correct === 0 ? t("recap_zero") : t("recap_some")}</span>
                 </div>
                 <div className="recap-card">
-                  <div className="eyebrow">Чему ты научился</div>
+                  <div className="eyebrow">{t("recap_learned")}</div>
                   <div className="recap-take">{lesson.takeaway}</div>
-                  {lesson.relevance && <div className="lsn-rel"><span className="lsn-rel-mk">Зачем тебе это:</span> {lesson.relevance}</div>}
+                  {lesson.relevance && <div className="lsn-rel"><span className="lsn-rel-mk">{t("lsn_whyyou")}</span> {lesson.relevance}</div>}
                 </div>
                 {quizResult.items.length > 0 && (
                   <div className="recap-list">
@@ -1246,9 +1246,9 @@ export default function App() {
                   </div>
                 )}
                 <div className="nav">
-                  <button className="btnlink" onClick={() => setLessonStage("read")}>← К уроку</button>
+                  <button className="btnlink" onClick={() => setLessonStage("read")}>← {t("recap_tolesson")}</button>
                   <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.task ? "homework" : "done")}>
-                    {lesson.task ? "К заданию" : "Дальше"}
+                    {lesson.task ? t("lsn_totask") : t("next")}
                   </button>
                 </div>
               </div>
@@ -1256,29 +1256,29 @@ export default function App() {
 
             {lessonStage === "homework" && (
               <div className="quizbox">
-                <div className="eyebrow" style={{ color: "var(--amber)" }}>Домашка · оценю из 10</div>
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("hw_title")}</div>
                 <div className="quizq">{lesson.task}</div>
                 {!grade ? (
                   <>
                     <textarea
                       className="field"
                       style={{ minHeight: 120, marginTop: 14 }}
-                      placeholder="Твой ответ по своему продукту…"
+                      placeholder={t("hw_ph")}
                       value={submission}
                       onChange={(e) => setSubmission(e.target.value)}
                     />
                     <div className="nav">
-                      <button className="btn ghost" onClick={() => setLessonStage("done")}>Пропустить</button>
+                      <button className="btn ghost" onClick={() => setLessonStage("done")}>{t("hw_skip")}</button>
                       <button className="btn amber" disabled={submission.trim().length < 3 || grading} onClick={submitHomework}>
-                        {grading ? "Проверяю…" : "Сдать на проверку"}
+                        {grading ? t("hw_checking") : t("hw_submit")}
                       </button>
                     </div>
                   </>
                 ) : grade.error ? (
                   <div className="err" style={{ marginTop: 14 }}>{grade.error}
                     <div className="nav">
-                      <button className="btn ghost" onClick={() => setLessonStage("done")}>Пропустить</button>
-                      <button className="btn" onClick={() => setGrade(null)}>Ещё раз</button>
+                      <button className="btn ghost" onClick={() => setLessonStage("done")}>{t("hw_skip")}</button>
+                      <button className="btn" onClick={() => setGrade(null)}>{t("hw_again")}</button>
                     </div>
                   </div>
                 ) : (
@@ -1296,8 +1296,8 @@ export default function App() {
                     ))}
                     {grade.comment && <div className="next" style={{ marginTop: 14 }}>{grade.comment}</div>}
                     <div className="nav">
-                      <button className="btn ghost" onClick={() => { setGrade(null); }}>Переписать</button>
-                      <button className="btn amber" onClick={() => setLessonStage("done")}>Дальше</button>
+                      <button className="btn ghost" onClick={() => { setGrade(null); }}>{t("hw_rewrite")}</button>
+                      <button className="btn amber" onClick={() => setLessonStage("done")}>{t("next")}</button>
                     </div>
                   </div>
                 )}
@@ -1310,19 +1310,19 @@ export default function App() {
               return (
                 <div>
                   <div className="card">
-                    <div className="eyebrow">Вывод урока</div>
+                    <div className="eyebrow">{t("done_outcome")}</div>
                     <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>{lesson.takeaway}</div>
                   </div>
                   <div className="nav">
-                    <button className="btn ghost" onClick={() => setPhase("result")}>К диагнозу</button>
+                    <button className="btn ghost" onClick={() => setPhase("result")}>{t("lsn_todiag")}</button>
                     {nextIdx < total ? (
-                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>Урок {nextIdx + 1}</button>
+                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>{t("word_lesson")} {nextIdx + 1}</button>
                     ) : (
-                      <button className="btn amber" onClick={reset}>Пройти диагностику заново</button>
+                      <button className="btn amber" onClick={reset}>{t("done_retake")}</button>
                     )}
                   </div>
                   {nextIdx >= total && (
-                    <div className="hint" style={{ marginTop: 12 }}>Курс пройден. Через месяц вернись и посмотри, сдвинулась ли слепая зона.</div>
+                    <div className="hint" style={{ marginTop: 12 }}>{t("done_coursedone")}</div>
                   )}
                 </div>
               );
