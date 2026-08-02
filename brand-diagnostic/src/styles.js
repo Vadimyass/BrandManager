@@ -288,7 +288,7 @@ export const CSS = `
 .bd .cctabtn{white-space:nowrap;padding:15px 26px;font-size:16px}
 @media(max-width:520px){.bd .coursecta{flex-direction:column;align-items:stretch}.bd .cctabtn{width:100%}}
 .bd .teaser{margin-top:34px;padding:clamp(22px,4vw,34px);background:rgba(255,255,255,0.055);border:1px solid var(--line);border-radius:24px;box-shadow:0 20px 50px rgba(22,23,43,.07);animation:fadeUp .5s .2s both}
-.bd .tstat{font-family:var(--disp);font-weight:700;font-size:clamp(34px,7vw,54px);letter-spacing:-.03em;line-height:1;margin:14px 0 8px;background:linear-gradient(92deg,var(--ink),var(--violet));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.bd .tstat{font-family:var(--disp);font-weight:700;font-size:clamp(28px,4.4vw,42px);letter-spacing:-.02em;line-height:1.05;margin:14px 0 8px;max-width:100%;overflow-wrap:anywhere;word-break:break-word;background:linear-gradient(92deg,var(--ink),var(--violet));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .bd .tstatnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:46ch}
 .bd .tbody{font-size:16.5px;line-height:1.65;margin:0 0 14px;max-width:58ch}
 .bd .tturn{font-size:16.5px;line-height:1.65;margin:0;padding-left:16px;border-left:2px solid var(--amber);max-width:58ch}
