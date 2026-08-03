@@ -347,6 +347,10 @@ export default function App() {
   const [shared, setShared] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
   const [historyIdx, setHistoryIdx] = useState(null);
+  const [readStep, setReadStep] = useState(0);
+  const [meetStep, setMeetStep] = useState(0);
+  const [profileAnswers, setProfileAnswers] = useState(["", "", ""]);
+  const [courseLog, setCourseLog] = useState({});
   const lesson = lessons?.[lessonIndex] ?? null;
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -488,23 +492,44 @@ export default function App() {
     });
   }
 
+  // Точку входа в курс раздваиваем: если уроков ещё нет — сперва знакомство с Мелио,
+  // потом генерация. Если уроки уже собраны — сразу открываем.
+  function beginCourse() {
+    if (lessons?.[0]) { openCourse(); return; }
+    setMeetStep(0);
+    setProfileAnswers(["", "", ""]);
+    setPhase("meet");
+    track("meet_opened");
+  }
+
+  // Собираем ответы знакомства в короткий профиль дела — он уточняет генерацию.
+  function profileText() {
+    const qs = [t("meet_q1"), t("meet_q2"), t("meet_q3")];
+    return profileAnswers
+      .map((a, i) => (a.trim() ? `${qs[i]} — ${a.trim()}` : ""))
+      .filter(Boolean)
+      .join(" | ");
+  }
+
   // Весь курс собирается одним запросом; дальше уроки листаются мгновенно, без загрузки.
-  function openCourse() {
+  function openCourse(profile) {
     track("course_opened");
     if (lessons?.[0]) {
       setLessonIndex(0);
+      setReadStep(0);
       setLessonStage("read");
       setPhase("lesson");
       return;
     }
     guard(async () => {
       setPhase("building");
-      const res = await getCourse(calibration, niche, result);
+      const res = await getCourse(calibration, niche, result, profile);
       const byIndex = {};
       for (const l of res.lessons) byIndex[l.index] = l;
       setLessons(byIndex);
       if (res.total) setCourseTotal(res.total);
       setLessonIndex(0);
+      setReadStep(0);
       setLessonStage("read");
       setPhase("lesson");
     });
@@ -514,12 +539,14 @@ export default function App() {
     if (!lessons?.[index]) return;
     setLessonIndex(index);
     setLessonStage("read");
+    setReadStep(0);
     setSubmission(""); setGrade(null); setGrading(false); setQuizResult(null);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // История урока в кабинете: сливаем патч в progress.lessonLog[index].
+  // История урока: держим в памяти (для гостей и разбора темы) и персистим для залогиненных.
   function saveLessonLog(index, patch) {
+    setCourseLog((prev) => ({ ...prev, [index]: { ...(prev[index] || {}), ...patch } }));
     const prevLog = progress?.lessonLog || {};
     const merged = { ...(prevLog[index] || {}), ...patch };
     persist({ lessonLog: { ...prevLog, [index]: merged } });
@@ -533,11 +560,13 @@ export default function App() {
       title: lesson.title,
       term: lesson.term,
       takeaway: lesson.takeaway,
+      relevance: lesson.relevance,
       quiz: items,
       quizCorrect: correct,
       quizTotal: items.length,
     });
-    setLessonStage("recap");
+    // Подытог после каждого урока не показываем — «чему научились» соберём в разбор темы в конце.
+    setLessonStage(lesson.task ? "homework" : "done");
   }
 
   async function submitHomework() {
@@ -596,6 +625,7 @@ export default function App() {
     setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
     setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
     setSubmission(""); setGrade(null); setGrading(false); setShared(false); setQuizResult(null); setHistoryIdx(null);
+    setReadStep(0); setMeetStep(0); setProfileAnswers(["", "", ""]); setCourseLog({});
     setDecisions([]); setLinks({ store: "", landing: "", social: "" }); setResult(null);
     setDiagnosticId(null); setFeedbackSent(null); setJoined(false); setEmail(""); setDeckUsage([]); setIntent(null);
   };
@@ -665,7 +695,7 @@ export default function App() {
               <div className="wl-left">
                 <div className="wl-hero">
                   <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Маскот Melyo" className="wl-mascot" />
-                  <div className="wl-bubble">{t("wl_bubble")}</div>
+                  <div className="wl-bubble">{t("melio_hi")}</div>
                 </div>
                 <h1 className="wl-h1">{t("wl_h1")}</h1>
                 <p className="wl-sub">{t("wl_sub")}</p>
@@ -1002,7 +1032,7 @@ export default function App() {
                   <div className="cctatitle">{hook.course}</div>
                   <div className="cctasub">Уроки от основ к глубине, по одной идее за раз. Первый — бесплатно.</div>
                 </div>
-                <button className="btnp cctabtn" onClick={openCourse}>Открыть курс →</button>
+                <button className="btnp cctabtn" onClick={beginCourse}>Открыть курс →</button>
               </div>
             )}
 
@@ -1060,7 +1090,7 @@ export default function App() {
               <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="off-masc" />
               <div className="price">{COURSE_PRICE}</div>
               <div className="pricenote">весь курс навсегда</div>
-              <button className="btn amber" style={{ width: "100%", padding: "15px", marginTop: 8 }} onClick={openCourse}>Начать курс — бесплатно</button>
+              <button className="btn amber" style={{ width: "100%", padding: "15px", marginTop: 8 }} onClick={beginCourse}>Начать курс — бесплатно</button>
               <button className="btnp" style={{ marginTop: 10 }} onClick={() => setPhase("checkout")}>Забрать весь курс</button>
               <button className="btnlink" onClick={() => setPhase("result")}>← к диагнозу</button>
             </div>
@@ -1120,7 +1150,7 @@ export default function App() {
 
             {joined && (
               <div style={{ marginTop: 20 }}>
-                <button className="btn amber" onClick={openCourse}>Открыть курс</button>
+                <button className="btn amber" onClick={beginCourse}>Открыть курс</button>
                 <div className="hint" style={{ marginTop: 10 }}>Доступ на время беты открыт — курс собирается под тебя прямо сейчас.</div>
               </div>
             )}
@@ -1128,6 +1158,49 @@ export default function App() {
             <div className="nav">
               <button className="btn ghost" onClick={() => setPhase("offer")}>Назад</button>
             </div>
+          </div>
+        )}
+
+        {phase === "meet" && (
+          <div className="phase meet">
+            {meetStep === 0 ? (
+              <div className="meet-intro">
+                <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc" />
+                <div className="meet-bubble">{t("meet_intro")}</div>
+                <button className="btnp" style={{ maxWidth: 260 }} onClick={() => setMeetStep(1)}>{t("next")}</button>
+              </div>
+            ) : (() => {
+              const qi = meetStep - 1;
+              const last = meetStep >= 3;
+              return (
+                <div className="meet-q">
+                  <div className="meet-dots">
+                    {[0, 1, 2].map((d) => <span key={d} className={"d5" + (d <= qi ? " on" : "")} />)}
+                  </div>
+                  <div className="meet-row">
+                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
+                    <div className="meet-bubble sm">{t(`meet_q${meetStep}`)}</div>
+                  </div>
+                  <input
+                    className="field"
+                    style={{ maxWidth: 420, marginTop: 6 }}
+                    placeholder={t(`meet_q${meetStep}_ph`)}
+                    value={profileAnswers[qi]}
+                    autoFocus
+                    onChange={(e) => setProfileAnswers((a) => a.map((x, k) => (k === qi ? e.target.value : x)))}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !last) setMeetStep(meetStep + 1); }}
+                  />
+                  <div className="nav">
+                    <button className="btn ghost" onClick={() => openCourse(profileText())}>{t("meet_skip")}</button>
+                    {last ? (
+                      <button className="btn amber" onClick={() => openCourse(profileText())}>{t("meet_go")}</button>
+                    ) : (
+                      <button className="btnp" style={{ maxWidth: 200 }} onClick={() => setMeetStep(meetStep + 1)}>{t("next")}</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1183,75 +1256,55 @@ export default function App() {
                   <h1 className="lsn-about">{lesson.title}</h1>
                   {lesson.summary && <p className="lsn-lead">{lesson.summary}</p>}
 
-                  {lesson.stat && <div className="tstat">{lesson.stat}</div>}
-                  {lesson.statNote && <div className="tstatnote">{lesson.statNote}</div>}
-                  <p className="lsn-text">{lesson.body}</p>
-                  {lesson.turn && <p className="tturn">{lesson.turn}</p>}
+                  {(() => {
+                    const steps = lesson.steps?.length ? lesson.steps : [lesson.body].filter(Boolean);
+                    const nsteps = Math.max(steps.length, 1);
+                    const cur = Math.min(readStep, nsteps - 1);
+                    const isFirst = cur === 0;
+                    const isLast = cur >= nsteps - 1;
+                    return (
+                      <>
+                        <div className="lsn-steps">
+                          {steps.map((_, si) => <span key={si} className={"lsn-dot" + (si <= cur ? " on" : "")} />)}
+                          <span className="lsn-stepn">{cur + 1} / {nsteps}</span>
+                        </div>
 
-                  <div className="termbox">
-                    <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_plain")}</div>
-                    <div className="termnote">{lesson.termNote}</div>
-                    <span className="termtag">{lesson.term}</span>
-                  </div>
+                        {isFirst && lesson.stat && <div className="tstat">{lesson.stat}</div>}
+                        {isFirst && lesson.statNote && <div className="tstatnote">{lesson.statNote}</div>}
 
-                  {lesson.task && (
-                    <div className="taskbox">
-                      <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_dothis")}</div>
-                      <div className="tasktext">{lesson.task}</div>
-                    </div>
-                  )}
+                        <p className="lsn-text" key={cur}>{steps[cur]}</p>
 
-                  <div className="lsn-outcome">
-                    <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_outcome")}</div>
-                    <div className="lsn-take">{lesson.takeaway}</div>
-                    {lesson.relevance && (
-                      <div className="lsn-rel"><span className="lsn-rel-mk">{t("lsn_whyyou")}</span> {lesson.relevance}</div>
-                    )}
-                  </div>
+                        {isLast && (
+                          <div className="termbox">
+                            <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("lsn_plain")}</div>
+                            <div className="termnote">{lesson.termNote}</div>
+                            <span className="termtag">{lesson.term}</span>
+                          </div>
+                        )}
 
-                  <div className="nav">
-                    <button className="btnlink" onClick={() => setPhase("result")}>← {t("lsn_todiag")}</button>
-                    <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
-                      {lesson.quiz?.length ? t("lsn_toquiz") : t("lsn_totask")}
-                    </button>
-                  </div>
+                        <div className="nav">
+                          {isFirst ? (
+                            <button className="btnlink" onClick={() => setPhase("result")}>← {t("lsn_todiag")}</button>
+                          ) : (
+                            <button className="btnlink" onClick={() => setReadStep(cur - 1)}>← {t("back")}</button>
+                          )}
+                          {isLast ? (
+                            <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
+                              {lesson.quiz?.length ? t("lsn_toquiz") : t("lsn_totask")}
+                            </button>
+                          ) : (
+                            <button className="btnp" style={{ maxWidth: 200 }} onClick={() => setReadStep(cur + 1)}>{t("lsn_next_step")}</button>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
 
             {lessonStage === "quiz" && (
               <Quiz items={lesson.quiz} onDone={onQuizDone} />
-            )}
-
-            {lessonStage === "recap" && quizResult && (
-              <div className="recap">
-                <div className="eyebrow" style={{ color: "var(--amber)" }}>{t("recap_title")}</div>
-                <div className="recap-score">
-                  <span className="recap-num">{quizResult.correct}<span className="recap-den"> / {quizResult.total}</span></span>
-                  <span className="recap-lbl">{quizResult.correct === quizResult.total ? t("recap_full") : quizResult.correct === 0 ? t("recap_zero") : t("recap_some")}</span>
-                </div>
-                <div className="recap-card">
-                  <div className="eyebrow">{t("recap_learned")}</div>
-                  <div className="recap-take">{lesson.takeaway}</div>
-                  {lesson.relevance && <div className="lsn-rel"><span className="lsn-rel-mk">{t("lsn_whyyou")}</span> {lesson.relevance}</div>}
-                </div>
-                {quizResult.items.length > 0 && (
-                  <div className="recap-list">
-                    {quizResult.items.map((r, i) => (
-                      <div className={"recap-row" + (r.ok ? " ok" : " miss")} key={i}>
-                        <span className="recap-mk">{r.ok ? "✓" : "✕"}</span>
-                        <span className="recap-q">{r.q}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="nav">
-                  <button className="btnlink" onClick={() => setLessonStage("read")}>← {t("recap_tolesson")}</button>
-                  <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.task ? "homework" : "done")}>
-                    {lesson.task ? t("lsn_totask") : t("next")}
-                  </button>
-                </div>
-              </div>
             )}
 
             {lessonStage === "homework" && (
@@ -1307,23 +1360,69 @@ export default function App() {
             {lessonStage === "done" && (() => {
               const nextIdx = lesson.index + 1;
               const total = courseTotal || lesson.total;
-              return (
-                <div>
-                  <div className="card">
-                    <div className="eyebrow">{t("done_outcome")}</div>
-                    <div className="big" style={{ fontSize: "clamp(22px,4vw,30px)" }}>{lesson.takeaway}</div>
+              const isThemeEnd = nextIdx >= total;
+
+              if (!isThemeEnd) {
+                return (
+                  <div className="lsn-doneshort">
+                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
+                    <div className="meet-bubble sm">{t("lsn_done_short")}</div>
+                    <div className="nav">
+                      <button className="btn ghost" onClick={() => setPhase("result")}>{t("lsn_todiag")}</button>
+                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>{t("lsn_done_next")}</button>
+                    </div>
                   </div>
+                );
+              }
+
+              // Разбор всей темы: собираем из журнала (память + прогресс).
+              const log = { ...(progress?.lessonLog || {}), ...courseLog };
+              const rows = Object.entries(log).map(([i, l]) => ({ i: Number(i), ...l })).sort((a, b) => a.i - b.i);
+              const correct = rows.reduce((s, r) => s + (r.quizCorrect || 0), 0);
+              const qtotal = rows.reduce((s, r) => s + (r.quizTotal || 0), 0);
+              return (
+                <div className="theme">
+                  <div className="meet-row">
+                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
+                    <div>
+                      <div className="lsn-num" style={{ fontSize: "clamp(26px,4vw,40px)" }}>{t("theme_title")}</div>
+                      <div className="lsn-lead" style={{ margin: 0 }}>{t("theme_sub")}</div>
+                    </div>
+                  </div>
+
+                  {qtotal > 0 && (
+                    <div className="recap-score" style={{ marginTop: 18 }}>
+                      <span className="recap-num">{correct}<span className="recap-den"> / {qtotal}</span></span>
+                      <span className="recap-lbl">{t("theme_score")}</span>
+                    </div>
+                  )}
+
+                  <div className="theme-list">
+                    {rows.map((r) => (
+                      <div className="theme-item" key={r.i}>
+                        <div className="theme-head"><span className="histnum">{t("word_lesson")} {r.i + 1}</span><span className="theme-title">{r.title || r.term}</span></div>
+                        {r.quiz?.length > 0 && (
+                          <div className="theme-qs">
+                            {r.quiz.map((q, qi) => (
+                              <div className={"recap-row" + (q.ok ? " ok" : " miss")} key={qi}>
+                                <span className="recap-mk">{q.ok ? "✓" : "✕"}</span>
+                                <span className="recap-q">{q.q}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {r.takeaway && (
+                          <div className="theme-take"><span className="lsn-rel-mk">{t("theme_learned")}: </span>{r.takeaway}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="nav">
                     <button className="btn ghost" onClick={() => setPhase("result")}>{t("lsn_todiag")}</button>
-                    {nextIdx < total ? (
-                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>{t("word_lesson")} {nextIdx + 1}</button>
-                    ) : (
-                      <button className="btn amber" onClick={reset}>{t("done_retake")}</button>
-                    )}
+                    <button className="btn amber" onClick={reset}>{t("done_retake")}</button>
                   </div>
-                  {nextIdx >= total && (
-                    <div className="hint" style={{ marginTop: 12 }}>{t("done_coursedone")}</div>
-                  )}
+                  <div className="hint" style={{ marginTop: 12 }}>{t("done_coursedone")}</div>
                 </div>
               );
             })()}

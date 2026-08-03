@@ -21,6 +21,7 @@ export interface Lesson {
   summary: string;
   stat: string;
   statNote: string;
+  steps: string[];
   body: string;
   turn: string;
   term: string;
@@ -102,14 +103,14 @@ const PLAIN_LANGUAGE_RULE = `ЯЗЫК: простые слова, как для 
 
 const DEPTH_RULES: Record<Depth, string> = {
   intro: `Это вводный урок — самый простой. Для человека, который никогда не думал о теме.
-- body 2 коротких предложения, termNote 1 предложение бытовым примером. Никаких терминов в body.
-- quiz: 1 вопрос. examples: 1 короткий пример, если усиливает; иначе пустой.`,
-  core: `Это урок среднего уровня. Читатель уже освоил основы из прошлых уроков — опирайся на них и иди глубже.
-- body 3–4 предложения: механика понятия.
-- quiz: 2 вопроса. examples: 1–2 (case + why).`,
-  advanced: `Это продвинутый урок. Материал сложнее — разбирай ПРИЧИНУ и нюанс, а не азы. Предполагай, что базовые понятия уже усвоены.
-- body 3–4 предложения: причина и глубинная механика.
-- quiz: 2 вопроса, ситуации потоньше. examples: 2 (case + why) с разбором «почему так вышло».`,
+- steps: 2 шага. Каждый шаг — 1–2 очень коротких предложения. Никаких терминов.
+- quiz: 1 вопрос. examples: []`,
+  core: `Это урок среднего уровня. Читатель уже освоил основы — опирайся на них.
+- steps: 3 шага. Каждый шаг — 1–2 коротких предложения, одна мысль на шаг.
+- quiz: 2 вопроса. examples: 1 (case + why) только если реально помогает.`,
+  advanced: `Это продвинутый урок. Разбирай причину простыми словами, без воды.
+- steps: 3 шага. Каждый шаг — 1–2 коротких предложения, одна мысль на шаг.
+- quiz: 2 вопроса потоньше. examples: 1 (case + why).`,
 };
 
 function lessonSystem(
@@ -118,32 +119,39 @@ function lessonSystem(
   niche: string | undefined,
   diagnosis: Diagnosis,
   position: { n: number; total: number; prevTerms: string[] },
+  profile?: string,
 ): string {
   const already = position.prevTerms.length
     ? `\nУЖЕ РАЗОБРАНО в прошлых уроках (НЕ повторяй эти понятия, истории и примеры — иди дальше и глубже): ${position.prevTerms.join("; ")}.`
     : "";
+  const profileLine = profile?.trim()
+    ? `\nТОЧНОЕ ДЕЛО ПОЛЬЗОВАТЕЛЯ (используй это в примерах и задании, говори про ИМЕННО это): ${profile.trim()}`
+    : "";
 
-  return `Ты — автор курса для основателя, который в этой теме новичок. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.
+  return `Ты — Мелио, тёплый и простой наставник. Пишешь для основателя, который в этой теме новичок. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.${profileLine}
 
 Это урок ${position.n} из ${position.total}. Новое понятие урока: «${plan.term}». Главная мысль: ${plan.focus}.
 ${DEPTH_RULES[plan.depth]}${already}
 
 ${PLAIN_LANGUAGE_RULE}
 
+ГЛАВНОЕ — ПРОЩЕ: короткие предложения, минимум слов, одна мысль на шаг. Никаких длинных абзацев. Человек читает урок «по чуть-чуть», шаг за шагом.
+
 Правила:
-- Обращайся на «ты», тепло, без менторства и лозунгов.
-- Каждый урок вводит НОВОЕ понятие и углубляет тему. Не пересказывай прошлое, а строй на нём.
-- ИСТОРИИ: главная история урока — из блока ниже, с её цифрами (в body). Дополнительно в examples можешь дать 1–2 КОРОТКИХ примера других известных брендов — но БЕЗ конкретных цифр, только качественно (что сделали и почему сработало). Не бери примеры-штампы из других уроков (скидка блогера, бесплатный доступ, инвестор), если их нет в истории.
-- task — конкретное действие с ЕГО продуктом в ЕГО нише.
-- scheme — 2–4 коротких подписи стрелками, только если помогает; иначе [].
-- summary — ОБЯЗАТЕЛЬНО, одна фраза «про что этот урок», простыми словами, до 90 знаков.
-- takeaway — ОБЯЗАТЕЛЬНО, одна ёмкая строка-вывод именно этого урока.
-- relevance — ОБЯЗАТЕЛЬНО, 1 предложение: как этот урок связан именно с его слабым местом «${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}» и что это ему даёт. Обращайся на «ты».
+- Обращайся на «ты», тепло, по-дружески, будто Мелио сидит рядом. Без менторства и лозунгов.
+- steps — это сам урок, разбитый на маленькие экраны. Каждый шаг читается за пару секунд. Главная история (с цифрами) — внутри шагов.
+- Каждый урок вводит НОВОЕ понятие. Не пересказывай прошлое.
+- В examples — максимум 1 короткий пример другого бренда БЕЗ цифр (или []).
+- task — конкретное простое действие с ЕГО продуктом в ЕГО нише.
+- scheme — 2–3 коротких подписи стрелками, только если помогает; иначе [].
+- summary — ОБЯЗАТЕЛЬНО, одна фраза «про что этот урок», до 80 знаков.
+- takeaway — ОБЯЗАТЕЛЬНО, одна ёмкая строка-вывод.
+- relevance — ОБЯЗАТЕЛЬНО, 1 предложение: как урок связан с его слабым местом «${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}».
 
 ИСТОРИЯ (единственный источник фактов):
 ${plan.anchor}
 
-Верни ТОЛЬКО JSON: {"title":"заголовок урока, до 50 знаков","summary":"про что урок, до 90 знаков","stat":"главная цифра истории, до 18 знаков","statNote":"что это за цифра, до 80 знаков","body":"по правилам уровня","turn":"суть в 1 предложении","term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":["подпись","подпись"],"examples":[{"case":"что случилось","why":"почему так вышло"}],"task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой","relevance":"как связано с его слабым местом"}`;
+Верни ТОЛЬКО JSON: {"title":"заголовок урока, до 50 знаков","summary":"про что урок, до 80 знаков","stat":"главная цифра истории, до 18 знаков","statNote":"что это за цифра, до 80 знаков","steps":["шаг 1: 1–2 коротких предложения","шаг 2: 1–2 коротких предложения"],"term":"${plan.term}","termNote":"объяснение понятия бытовым примером","scheme":[],"examples":[],"task":"задание на его продукте","quiz":[{"q":"...","left":"...","right":"...","correct":"left|right","explain":"..."}],"takeaway":"вывод урока одной строкой","relevance":"как связано с его слабым местом"}`;
 }
 
 // Параллельность ограничена (по 2): бесплатные модели упираются в лимит провайдера.
@@ -156,13 +164,14 @@ export async function runCourse(
   diagnosis: Diagnosis,
   usage: LlmUsage[],
   lang?: string,
+  profile?: string,
 ): Promise<Lesson[]> {
   const plan = planFor(axis);
   const out: Lesson[] = [];
   for (let i = 0; i < plan.length; i += CONCURRENCY) {
     const batch = plan.slice(i, i + CONCURRENCY);
     const done = await Promise.all(
-      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang)),
+      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile)),
     );
     out.push(...done);
   }
@@ -177,6 +186,7 @@ export async function runLesson(
   diagnosis: Diagnosis,
   usage: LlmUsage[],
   lang?: string,
+  profile?: string,
 ): Promise<Lesson> {
   const plan = planFor(axis);
   const total = plan.length;
@@ -185,7 +195,7 @@ export async function runLesson(
 
   const lesson = await llmJson<Lesson>(
     "assessor",
-    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }) + langRule(lang),
+    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }, profile) + langRule(lang),
     `Диагноз фаундера: ${diagnosis.diagnosis}`,
     usage,
     1600,
@@ -196,6 +206,21 @@ export async function runLesson(
   lesson.term = lesson.term || plan[i].term;
   lesson.title = lesson.title || plan[i].term;
   lesson.summary = (lesson.summary && String(lesson.summary).trim()) || plan[i].focus;
+  lesson.steps = Array.isArray(lesson.steps)
+    ? lesson.steps.filter((x) => typeof x === "string" && x.trim()).slice(0, 3)
+    : [];
+  if (!lesson.steps.length) {
+    lesson.steps = String(lesson.body || plan[i].focus)
+      .split(/(?<=[.!?])\s+/)
+      .reduce<string[]>((acc, s) => {
+        const t = s.trim();
+        if (!t) return acc;
+        if (acc.length && (acc[acc.length - 1].length < 90)) acc[acc.length - 1] += " " + t;
+        else acc.push(t);
+        return acc;
+      }, [])
+      .slice(0, 3);
+  }
   lesson.takeaway = (lesson.takeaway && String(lesson.takeaway).trim()) || plan[i].focus;
   lesson.relevance = (lesson.relevance && String(lesson.relevance).trim())
     || `Это закрывает твоё слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}.`;

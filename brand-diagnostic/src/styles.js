@@ -334,6 +334,31 @@ export const CSS = `
 .bd .histsub{font-size:14px;line-height:1.55;color:var(--ink);padding:10px 12px;background:rgba(255,255,255,.04);border-radius:12px}
 .bd .histscore{font-size:14px;font-weight:600;color:var(--amber)}
 .bd .histcomment{font-size:13.5px;color:var(--muted);line-height:1.5}
+/* Пошаговое чтение урока */
+.bd .lsn-steps{display:flex;align-items:center;gap:6px;margin:2px 0 16px}
+.bd .lsn-dot{width:24px;height:4px;border-radius:2px;background:var(--line);transition:background .2s}
+.bd .lsn-dot.on{background:var(--amber)}
+.bd .lsn-stepn{margin-left:6px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.bd .lsn-text{animation:fadeUp .25s both}
+.bd .lsn-doneshort{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;max-width:520px;margin:24px auto;animation:fadeUp .4s both}
+/* Диалог Мелио: знакомство */
+.bd .meet{max-width:640px;margin:0 auto}
+.bd .meet-intro{display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;padding-top:12px;animation:fadeUp .4s both}
+.bd .meet-masc{width:120px;height:auto}
+.bd .meet-masc.sm{width:56px;flex:none}
+.bd .meet-bubble{position:relative;max-width:520px;font-size:16.5px;line-height:1.55;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:18px;padding:16px 20px}
+.bd .meet-bubble.sm{font-size:15.5px;padding:12px 16px}
+.bd .meet-q{display:flex;flex-direction:column;gap:14px;animation:fadeUp .3s both}
+.bd .meet-dots{display:flex;gap:6px;margin-bottom:4px}
+.bd .meet-row{display:flex;align-items:flex-start;gap:12px}
+/* Разбор темы (финал курса) */
+.bd .theme{max-width:720px;margin:0 auto;animation:fadeUp .4s both}
+.bd .theme-list{display:flex;flex-direction:column;gap:14px;margin:22px 0 8px}
+.bd .theme-item{padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.03)}
+.bd .theme-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.bd .theme-title{font-family:var(--disp);font-weight:600;font-size:15.5px;color:var(--ink)}
+.bd .theme-qs{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.bd .theme-take{font-size:14px;line-height:1.5;color:var(--ink)}
 .bd .tq{font-family:var(--disp);font-weight:600;font-size:clamp(19px,3.4vw,24px);letter-spacing:-.01em;margin:22px 0 8px}
 .bd .tlesson{font-size:15px;color:var(--muted);line-height:1.55;max-width:52ch}
 /* Оффер: десктоп 2 колонки (контент | карточка покупки) */

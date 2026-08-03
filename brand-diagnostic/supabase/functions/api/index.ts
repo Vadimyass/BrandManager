@@ -127,11 +127,11 @@ async function diagnose(body: DiagnosePayload) {
   return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
 }
 
-async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis; lang?: string }) {
+async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis; lang?: string; profile?: string }) {
   if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
   const usage: LlmUsage[] = [];
   const axis = body.diagnosis.weakness.axis;
-  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage, body.lang);
+  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage, body.lang, body.profile);
   return { status: "ok", lessons, total: courseLength(axis) };
 }
 

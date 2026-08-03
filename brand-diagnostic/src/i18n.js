@@ -100,6 +100,26 @@ const T = {
   done_outcome: { uk: "Висновок уроку", ru: "Вывод урока", en: "Lesson conclusion" },
   done_retake: { uk: "Пройти діагностику заново", ru: "Пройти диагностику заново", en: "Retake the diagnosis" },
   done_coursedone: { uk: "Курс пройдено. За місяць повернись і подивись, чи зрушила сліпа зона.", ru: "Курс пройден. Через месяц вернись и посмотри, сдвинулась ли слепая зона.", en: "Course complete. Come back in a month to see if your blind spot shifted." },
+  lsn_next_step: { uk: "Далі", ru: "Дальше", en: "Next" },
+  lsn_done_next: { uk: "Наступний урок", ru: "Следующий урок", en: "Next lesson" },
+  lsn_done_short: { uk: "Урок пройдено ✎", ru: "Урок пройден ✎", en: "Lesson done ✎" },
+  // Мелио — знакомство
+  melio_hi: { uk: "Привіт, давай знайомитись. Мене звати Меліо, але ти можеш звати мене Мелок)", ru: "Привет, давай знакомиться. Меня зовут Мелио, но ты можешь называть меня Мелок)", en: "Hi, let's get acquainted. I'm Melio — but you can call me Mel)" },
+  meet_intro: { uk: "А тепер познайомимось ближче. Хочу глибше зрозуміти твоє діло — підготував кілька питань, а після цього пройдемось по обраній темі. І не хвилюйся, я завжди поруч і намагатимусь тобі допомогти.", ru: "А вот теперь давай знакомиться ближе. Хочу глубже понять твоё дело — подготовил несколько вопросов, а после этого пройдёмся по выбранной теме. И не волнуйся, я всегда рядом и буду стараться тебе помочь.", en: "Now let's get to know each other better. I want to understand your business more deeply — I've got a few questions, and after that we'll go through your chosen topic. And don't worry, I'm always here to help." },
+  meet_q1: { uk: "Що саме ти робиш або продаєш? Опиши одним реченням.", ru: "Что именно ты делаешь или продаёшь? Опиши одним предложением.", en: "What exactly do you do or sell? One sentence." },
+  meet_q1_ph: { uk: "Напр.: шию сумки з екошкіри на замовлення", ru: "Напр.: шью сумки из экокожи на заказ", en: "e.g. I make custom eco-leather bags" },
+  meet_q2: { uk: "Хто найчастіше в тебе купує?", ru: "Кто чаще всего у тебя покупает?", en: "Who buys from you most often?" },
+  meet_q2_ph: { uk: "Напр.: дівчата 20–30, люблять хендмейд", ru: "Напр.: девушки 20–30, любят хендмейд", en: "e.g. women 20–30 who love handmade" },
+  meet_q3: { uk: "Як люди зараз про тебе дізнаються?", ru: "Как люди сейчас о тебе узнают?", en: "How do people find you right now?" },
+  meet_q3_ph: { uk: "Напр.: Instagram і сарафанне радіо", ru: "Напр.: Instagram и сарафанное радио", en: "e.g. Instagram and word of mouth" },
+  meet_go: { uk: "Готово, поїхали!", ru: "Готово, поехали!", en: "Done, let's go!" },
+  meet_skip: { uk: "Пропустити", ru: "Пропустить", en: "Skip" },
+  // финальный разбор темы
+  theme_title: { uk: "Розбір теми", ru: "Разбор темы", en: "Theme recap" },
+  theme_sub: { uk: "Ось що ти пройшов і чого навчився", ru: "Вот что ты прошёл и чему научился", en: "Here's what you covered and learned" },
+  theme_youpicked: { uk: "Твоя відповідь", ru: "Твой ответ", en: "Your answer" },
+  theme_learned: { uk: "Що засвоїли", ru: "Что усвоили", en: "What we learned" },
+  theme_score: { uk: "Правильних відповідей", ru: "Верных ответов", en: "Correct answers" },
 };
 
 export function t(key) {
