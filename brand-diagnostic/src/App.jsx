@@ -339,7 +339,9 @@ export default function App() {
   const [intent, setIntent] = useState(s.intent ?? null);
   const [lessons, setLessons] = useState(s.lessons ?? {});
   const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 10);
-  const [lessonStage, setLessonStage] = useState(s.lessonStage ?? "read");
+  const [lessonStage, setLessonStage] = useState(
+    ["read", "quiz", "homework", "done"].includes(s.lessonStage) ? s.lessonStage : "read",
+  );
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
   const [submission, setSubmission] = useState("");
   const [grade, setGrade] = useState(null);
