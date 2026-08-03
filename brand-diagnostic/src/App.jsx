@@ -340,7 +340,7 @@ export default function App() {
   const [lessons, setLessons] = useState(s.lessons ?? {});
   const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 10);
   const [lessonStage, setLessonStage] = useState(
-    ["read", "quiz", "homework", "done"].includes(s.lessonStage) ? s.lessonStage : "read",
+    ["read", "quiz", "homework", "themerecap"].includes(s.lessonStage) ? s.lessonStage : "read",
   );
   const [lessonIndex, setLessonIndex] = useState(s.lessonIndex ?? 0);
   const [submission, setSubmission] = useState("");
@@ -422,16 +422,6 @@ export default function App() {
     }
   }, [phase, lessonIndex]);
 
-  // maxLesson = число реально ЗАВЕРШЁННЫХ уроков. Растёт только при доходе до «done».
-  useEffect(() => {
-    if (phase === "lesson" && lessonStage === "done" && lesson) {
-      const total = courseTotal || lesson.total;
-      const completed = Math.max(progress?.maxLesson ?? 0, lesson.index + 1);
-      if (completed >= total) track("course_completed", { total });
-      persist({ maxLesson: completed });
-      saveLessonLog(lesson.index, { title: lesson.title, completedAt: new Date().toISOString() });
-    }
-  }, [phase, lessonStage]);
 
   async function guard(fn) {
     lastAction.current = fn;
@@ -568,7 +558,24 @@ export default function App() {
       quizTotal: items.length,
     });
     // Подытог после каждого урока не показываем — «чему научились» соберём в разбор темы в конце.
-    setLessonStage(lesson.task ? "homework" : "done");
+    if (lesson.task) setLessonStage("homework");
+    else finishLesson();
+  }
+
+  // Урок завершён: фиксируем прогресс и сразу ведём дальше — без промежуточного экрана.
+  // На последнем уроке показываем разбор всей темы.
+  function finishLesson() {
+    const total = courseTotal || lesson.total;
+    const completed = Math.max(progress?.maxLesson ?? 0, lesson.index + 1);
+    persist({ maxLesson: completed });
+    saveLessonLog(lesson.index, { title: lesson.title, completedAt: new Date().toISOString() });
+    if (lesson.index + 1 < total) {
+      goToLesson(lesson.index + 1);
+    } else {
+      track("course_completed", { total });
+      setLessonStage("themerecap");
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   async function submitHomework() {
@@ -1291,8 +1298,8 @@ export default function App() {
                             <button className="btnlink" onClick={() => setReadStep(cur - 1)}>← {t("back")}</button>
                           )}
                           {isLast ? (
-                            <button className="btnp" style={{ maxWidth: 220 }} onClick={() => setLessonStage(lesson.quiz?.length ? "quiz" : "homework")}>
-                              {lesson.quiz?.length ? t("lsn_toquiz") : t("lsn_totask")}
+                            <button className="btnp" style={{ maxWidth: 220 }} onClick={() => { if (lesson.quiz?.length) setLessonStage("quiz"); else if (lesson.task) setLessonStage("homework"); else finishLesson(); }}>
+                              {lesson.quiz?.length ? t("lsn_toquiz") : lesson.task ? t("lsn_totask") : t("lsn_next_step")}
                             </button>
                           ) : (
                             <button className="btnp" style={{ maxWidth: 200 }} onClick={() => setReadStep(cur + 1)}>{t("lsn_next_step")}</button>
@@ -1323,7 +1330,7 @@ export default function App() {
                       onChange={(e) => setSubmission(e.target.value)}
                     />
                     <div className="nav">
-                      <button className="btn ghost" onClick={() => setLessonStage("done")}>{t("hw_skip")}</button>
+                      <button className="btn ghost" onClick={finishLesson}>{t("hw_skip")}</button>
                       <button className="btn amber" disabled={submission.trim().length < 3 || grading} onClick={submitHomework}>
                         {grading ? t("hw_checking") : t("hw_submit")}
                       </button>
@@ -1332,7 +1339,7 @@ export default function App() {
                 ) : grade.error ? (
                   <div className="err" style={{ marginTop: 14 }}>{grade.error}
                     <div className="nav">
-                      <button className="btn ghost" onClick={() => setLessonStage("done")}>{t("hw_skip")}</button>
+                      <button className="btn ghost" onClick={finishLesson}>{t("hw_skip")}</button>
                       <button className="btn" onClick={() => setGrade(null)}>{t("hw_again")}</button>
                     </div>
                   </div>
@@ -1352,31 +1359,14 @@ export default function App() {
                     {grade.comment && <div className="next" style={{ marginTop: 14 }}>{grade.comment}</div>}
                     <div className="nav">
                       <button className="btn ghost" onClick={() => { setGrade(null); }}>{t("hw_rewrite")}</button>
-                      <button className="btn amber" onClick={() => setLessonStage("done")}>{t("next")}</button>
+                      <button className="btn amber" onClick={finishLesson}>{t("next")}</button>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {lessonStage === "done" && (() => {
-              const nextIdx = lesson.index + 1;
-              const total = courseTotal || lesson.total;
-              const isThemeEnd = nextIdx >= total;
-
-              if (!isThemeEnd) {
-                return (
-                  <div className="lsn-doneshort">
-                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
-                    <div className="meet-bubble sm">{t("lsn_done_short")}</div>
-                    <div className="nav">
-                      <button className="btn ghost" onClick={() => setPhase("result")}>{t("lsn_todiag")}</button>
-                      <button className="btn amber" onClick={() => goToLesson(nextIdx)}>{t("lsn_done_next")}</button>
-                    </div>
-                  </div>
-                );
-              }
-
+            {lessonStage === "themerecap" && (() => {
               // Разбор всей темы: собираем из журнала (память + прогресс).
               const log = { ...(progress?.lessonLog || {}), ...courseLog };
               const rows = Object.entries(log).map(([i, l]) => ({ i: Number(i), ...l })).sort((a, b) => a.i - b.i);
