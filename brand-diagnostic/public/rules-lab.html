@@ -156,6 +156,7 @@ async function api(bodyObj){
 
 async function load(){
   try{
+    saveConn();
     setStatus("connStatus","Загружаю…");
     const d=await api({});
     cfg=d.config; defaults=d.defaults||d.config;
@@ -283,6 +284,7 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 
 async function save(){
   try{
+    saveConn();
     const c=conn();
     if(!c.admin){ setStatus("saveStatus","Нужен admin-ключ (раздел «Подключение»)","err"); document.getElementById("connBox").open=true; return; }
     setStatus("saveStatus","Сохраняю…");
