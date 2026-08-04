@@ -65,6 +65,22 @@
   #schemaSvg .node{cursor:default}
   #schemaSvg .node.click{cursor:pointer}
   #schemaSvg .node.click:hover rect{stroke:var(--amber)}
+  .tl{margin-top:16px;border:1px solid var(--line);border-radius:14px;padding:20px;background:var(--bg)}
+  .tl-num{font-family:var(--disp);font-weight:800;font-size:26px;color:var(--amber);line-height:1}
+  .tl-title{font-family:var(--disp);font-weight:700;font-size:20px;margin:6px 0 4px}
+  .tl-sum{color:var(--muted);font-size:14px;margin-bottom:14px}
+  .tl-stat{font-family:var(--disp);font-weight:700;font-size:30px;color:var(--violet);line-height:1;margin-top:8px}
+  .tl-sub2{color:var(--muted);font-size:12.5px;margin-bottom:12px}
+  .tl-step{font-size:15px;line-height:1.6;margin:0 0 10px;padding-left:30px;position:relative}
+  .tl-sn{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;background:var(--surface2);color:var(--amber);font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+  .tl-box{font-size:14px;line-height:1.55;margin:12px 0;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+  .tl-box b{color:var(--amber)}
+  .tl-take{border-left:3px solid var(--amber)}
+  .tl-q{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+  .tl-qq{font-weight:600;font-size:14.5px;margin-bottom:8px}
+  .tl-opt{font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px}
+  .tl-opt.ok{border-color:var(--amber);color:var(--amber)}
+  .tl-ex{font-size:12.5px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
@@ -93,12 +109,35 @@
   <div class="tabs">
     <button class="tab on" id="tabEditor" onclick="setTab('editor')">Правила</button>
     <button class="tab" id="tabSchema" onclick="setTab('schema')">Схема</button>
+    <button class="tab" id="tabTest" onclick="setTab('test')">Тестовый урок</button>
   </div>
 
   <div id="schemaView" style="display:none">
     <div class="card">
       <div class="eyebrow">Схема пайплайна · клик по узлу настроек → к правилам</div>
       <div id="schemaSvg"></div>
+    </div>
+  </div>
+
+  <div id="testView" style="display:none">
+    <div class="card">
+      <div class="eyebrow">Тестовый урок · генерит по текущим (несохранённым) правилам</div>
+      <div class="row">
+        <div><label>Ниша / дело</label><input type="text" id="tNiche" placeholder="напр. кофейня на вынос" /></div>
+        <div><label>Слабое место (ось)</label>
+          <select id="tAxis"><option value="marketing">Маркетинг</option><option value="product">Продукт</option><option value="operations">Операционка</option><option value="brand">Бренд</option></select>
+        </div>
+        <div><label>Урок №</label><input type="number" id="tIndex" min="1" max="10" value="1" /></div>
+        <div><label>Язык</label>
+          <select id="tLang"><option value="uk">УКР</option><option value="ru" selected>РУС</option><option value="en">ENG</option></select>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="pri" onclick="genTest()">Сгенерировать урок</button>
+        <span class="status" id="testStatus"></span>
+      </div>
+      <div class="hint">Использует те же правила и кривую сложности, что открыты сейчас в редакторе — сохранять не обязательно. Один урок = один запрос к модели.</div>
+      <div id="testOut"></div>
     </div>
   </div>
 
@@ -229,10 +268,62 @@ function render(){
 }
 
 function setTab(t){
-  const ed=document.getElementById('editorView'), sc=document.getElementById('schemaView');
-  const te=document.getElementById('tabEditor'), ts=document.getElementById('tabSchema');
-  if(t==='schema'){ ed.style.display='none'; sc.style.display='block'; ts.classList.add('on'); te.classList.remove('on'); renderSchema(); }
-  else { ed.style.display='block'; sc.style.display='none'; te.classList.add('on'); ts.classList.remove('on'); }
+  const views={editor:'editorView',schema:'schemaView',test:'testView'};
+  const tabs={editor:'tabEditor',schema:'tabSchema',test:'tabTest'};
+  Object.entries(views).forEach(([k,id])=>document.getElementById(id).style.display=(k===t?'block':'none'));
+  Object.entries(tabs).forEach(([k,id])=>document.getElementById(id).classList.toggle('on',k===t));
+  if(t==='schema') renderSchema();
+}
+
+async function genTest(){
+  try{
+    const c=conn();
+    if(!c.url||!c.anon){ setStatus('testStatus','Заполни подключение (вкладка сверху)','err'); return; }
+    setStatus('testStatus','Генерирую урок… (10–30 сек)');
+    document.getElementById('testOut').innerHTML='';
+    const body={
+      config:cfg,
+      niche:val('tNiche'),
+      axis:document.getElementById('tAxis').value,
+      index:(+val('tIndex')||1)-1,
+      lang:document.getElementById('tLang').value,
+    };
+    const res=await fetch(c.url+"/functions/v1/api/testlesson",{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':c.anon,'Authorization':'Bearer '+c.anon},
+      body:JSON.stringify(body)
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+    renderTestLesson(data.lesson);
+    setStatus('testStatus','Готово ✓','ok');
+  }catch(e){ setStatus('testStatus',String(e.message||e),'err'); }
+}
+
+function renderTestLesson(l){
+  const out=document.getElementById('testOut');
+  if(!l){ out.innerHTML=''; return; }
+  const steps=(l.steps||[]).map((s,i)=>`<p class="tl-step"><span class="tl-sn">${i+1}</span>${esc(s)}</p>`).join('');
+  const quiz=(l.quiz||[]).map(q=>`
+    <div class="tl-q">
+      <div class="tl-qq">${esc(q.q)}</div>
+      <div class="tl-opt ${q.correct==='left'?'ok':''}">${esc(q.left)}${q.correct==='left'?' ✓':''}</div>
+      <div class="tl-opt ${q.correct==='right'?'ok':''}">${esc(q.right)}${q.correct==='right'?' ✓':''}</div>
+      <div class="tl-ex">${esc(q.explain||'')}</div>
+    </div>`).join('');
+  out.innerHTML=`
+    <div class="tl">
+      <div class="tl-num">Урок ${(l.index||0)+1}</div>
+      <div class="tl-title">${esc(l.title||'')}</div>
+      <div class="tl-sum">${esc(l.summary||'')}</div>
+      ${l.stat?`<div class="tl-stat">${esc(l.stat)}</div><div class="tl-sub2">${esc(l.statNote||'')}</div>`:''}
+      ${steps}
+      ${l.term?`<div class="tl-box"><b>Простыми словами:</b> ${esc(l.termNote||'')} <i>(${esc(l.term)})</i></div>`:''}
+      ${l.task?`<div class="tl-box"><b>Задание:</b> ${esc(l.task)}</div>`:''}
+      ${quiz}
+      <div class="tl-box tl-take"><b>Итог:</b> ${esc(l.takeaway||'')}</div>
+      ${l.relevance?`<div class="tl-box"><b>Зачем тебе это:</b> ${esc(l.relevance)}</div>`:''}
+    </div>`;
 }
 function gotoEditor(cardId){
   setTab('editor');

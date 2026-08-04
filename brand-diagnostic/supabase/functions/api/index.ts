@@ -13,7 +13,7 @@ import {
   runMethodist,
   type SeedAnswer,
 } from "./agents.ts";
-import { courseLength, runCourse } from "./course.ts";
+import { courseLength, runCourse, runLesson } from "./course.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
 import { type CourseConfig, DEFAULT_CONFIG, normalizeConfig } from "./config.ts";
 import type { LlmUsage } from "./llm.ts";
@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
         return json(await grade(body));
       case "config":
         return json(await config(req, body));
+      case "testlesson":
+        return json(await testLesson(body));
       case "track":
         return json(await track(body));
       case "feedback":
@@ -142,6 +144,32 @@ async function course(body: { calibration: Calibration; niche?: string; diagnosi
   const cfg = await loadConfig();
   const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage, body.lang, body.profile, cfg);
   return { status: "ok", lessons, total: courseLength(axis) };
+}
+
+// Тестовый урок для лаборатории: генерит ОДИН урок по переданному (несохранённому)
+// конфигу и примерным вводным — чтобы видеть эффект весов на реальном ответе модели.
+async function testLesson(body: {
+  config?: unknown; niche?: string; axis?: string; index?: number;
+  model?: string; lang?: string; profile?: string; weaknessTitle?: string;
+}) {
+  const cfg = normalizeConfig(body.config);
+  const axes = ["product", "marketing", "operations", "brand"];
+  const axis = axes.includes(body.axis ?? "") ? body.axis! : "marketing";
+  const total = courseLength(axis);
+  const index = Math.min(Math.max(Math.floor(Number(body.index) || 0), 0), total - 1);
+  const niche = String(body.niche ?? "").slice(0, 120);
+  const superAxis = axes.find((a) => a !== axis) ?? "product";
+  const cal: Calibration = { industry: niche || "малый бизнес", model: body.model === "B2B" ? "B2B" : "B2C", key_metric: "продажи в месяц" };
+  const wTitle = String(body.weaknessTitle ?? "").slice(0, 60) || AXIS_NAMES[axis];
+  const diagnosis: Diagnosis = {
+    diagnosis: `Ты силён в направлении «${AXIS_NAMES[superAxis]}», но проседаешь в «${AXIS_NAMES[axis]}» — почти не уделяешь этому внимания.`,
+    weakness: { axis, title: wTitle, note: `почти не занимаешься направлением «${AXIS_NAMES[axis]}»` },
+    superpower: { axis: superAxis, title: AXIS_NAMES[superAxis], note: "делаешь это лучше всего" },
+    axes: [],
+  };
+  const usage: LlmUsage[] = [];
+  const lesson = await runLesson(index, axis, cal, niche, diagnosis, usage, body.lang, body.profile, cfg);
+  return { status: "ok", lesson, usage };
 }
 
 // Правила построения курса. GET — читать (не секрет), POST — сохранять по admin-ключу.
