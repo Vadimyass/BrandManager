@@ -369,6 +369,46 @@ export default function App() {
     if (m && articleBySlug(m[1])) { setArticleSlug(m[1]); setPhase("article"); }
   }, []);
 
+  // Роуты: у каждого урока и кабинета свой адрес (#/lesson/N, #/cabinet).
+  // Работают кнопка «назад» браузера, обновление и шаринг ссылки.
+  const routingRef = useRef(false);
+  function applyRoute() {
+    const h = window.location.hash;
+    const m = h.match(/#\/lesson\/(\d+)/);
+    if (m) {
+      const idx = parseInt(m[1], 10) - 1;
+      if (lessons?.[idx]) {
+        routingRef.current = true;
+        if (lessonIndex !== idx) { setLessonIndex(idx); setReadStep(0); setQuizResult(null); setGrade(null); setSubmission(""); }
+        setLessonStage((s) => (["read", "quiz", "homework", "themerecap"].includes(s) ? s : "read"));
+        setPhase("lesson");
+      }
+    } else if (/#\/cabinet/.test(h)) {
+      routingRef.current = true;
+      setPhase("cabinet");
+    }
+  }
+  useEffect(() => {
+    const onHash = () => applyRoute();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  });
+  // Первичное применение маршрута — после восстановления сессии/данных.
+  useEffect(() => { applyRoute(); }, [lessons]);
+  // Держим адрес в соответствии с текущим экраном.
+  useEffect(() => {
+    if (routingRef.current) { routingRef.current = false; return; }
+    let want = null;
+    if (phase === "lesson" && lesson) want = `#/lesson/${lessonIndex + 1}`;
+    else if (phase === "cabinet") want = "#/cabinet";
+    else if (phase === "article") return; // у статьи свой хэш
+    const cur = window.location.hash;
+    if (want && cur !== want) { try { window.location.hash = want; } catch { /* ignore */ } }
+    else if (!want && cur && /#\/(lesson|cabinet)/.test(cur)) {
+      try { history.replaceState(null, "", window.location.pathname + window.location.search); } catch { /* ignore */ }
+    }
+  }, [phase, lessonIndex]);
+
   function openArticle(slug) {
     setArticleSlug(slug);
     try { history.replaceState(null, "", `#article=${slug}`); } catch { /* ignore */ }

@@ -56,6 +56,15 @@
   .actions{display:flex;gap:10px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--bg);padding:14px 0 4px;margin-top:8px}
   .hint{font-size:12px;color:var(--muted-d);margin-top:6px}
   details summary{cursor:pointer;color:var(--muted);font-size:13px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}
+  .tab{background:transparent;border:1px solid var(--line);color:var(--muted);padding:8px 18px}
+  .tab.on{background:var(--surface2);color:var(--ink);border-color:var(--ink)}
+  .card.flash{animation:flash 1.1s ease}
+  @keyframes flash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--amber)}}
+  #schemaSvg svg{width:100%;height:auto}
+  #schemaSvg .node{cursor:default}
+  #schemaSvg .node.click{cursor:pointer}
+  #schemaSvg .node.click:hover rect{stroke:var(--amber)}
 </style>
 </head>
 <body>
@@ -81,7 +90,20 @@
 </div>
 
 <div id="app" style="display:none">
-  <div class="card">
+  <div class="tabs">
+    <button class="tab on" id="tabEditor" onclick="setTab('editor')">Правила</button>
+    <button class="tab" id="tabSchema" onclick="setTab('schema')">Схема</button>
+  </div>
+
+  <div id="schemaView" style="display:none">
+    <div class="card">
+      <div class="eyebrow">Схема пайплайна · клик по узлу настроек → к правилам</div>
+      <div id="schemaSvg"></div>
+    </div>
+  </div>
+
+  <div id="editorView">
+  <div class="card" id="diffCard">
     <div class="eyebrow">Кривая сложности</div>
     <div class="row">
       <div>
@@ -101,7 +123,7 @@
     <div class="hint" id="diffPhrase"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="rulesCard">
     <div class="eyebrow">Правила (вес = сила в промпте)</div>
     <div id="rules"></div>
     <button class="sm ghost" style="margin-top:8px" onclick="addRule()">+ Добавить правило</button>
@@ -120,6 +142,7 @@
     <button class="ghost" onclick="resetDefaults()">Сбросить к дефолту</button>
     <span class="status" id="saveStatus"></span>
   </div>
+  </div><!-- /editorView -->
 </div>
 
 <script>
@@ -202,7 +225,70 @@ function render(){
   document.getElementById("dEnd").value=cfg.difficulty.end;
   document.getElementById("dsVal").textContent=cfg.difficulty.start;
   document.getElementById("deVal").textContent=cfg.difficulty.end;
-  renderRules(); renderCurve(); renderPreview();
+  renderRules(); renderCurve(); renderPreview(); renderSchema();
+}
+
+function setTab(t){
+  const ed=document.getElementById('editorView'), sc=document.getElementById('schemaView');
+  const te=document.getElementById('tabEditor'), ts=document.getElementById('tabSchema');
+  if(t==='schema'){ ed.style.display='none'; sc.style.display='block'; ts.classList.add('on'); te.classList.remove('on'); renderSchema(); }
+  else { ed.style.display='block'; sc.style.display='none'; te.classList.add('on'); ts.classList.remove('on'); }
+}
+function gotoEditor(cardId){
+  setTab('editor');
+  const el=document.getElementById(cardId);
+  if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+}
+function renderSchema(){
+  if(!cfg) return;
+  const box=document.getElementById('schemaSvg'); if(!box) return;
+  const en=cfg.rules.filter(r=>r.enabled&&r.weight>=12).length;
+  const top=cfg.rules.filter(r=>r.enabled&&r.weight>=12).sort((a,b)=>b.weight-a.weight).slice(0,3).map(r=>r.name).join(' · ')||'—';
+  const d=cfg.difficulty;
+  const node=(x,y,w,h,color,title,sub,click,extra)=>`
+    <g transform="translate(${x},${y})" class="node ${click?'click':''}" ${click?`onclick="${click}"`:''}>
+      <rect width="${w}" height="${h}" rx="12" fill="var(--surf)" stroke="var(--line)"/>
+      <rect width="6" height="${h}" rx="3" fill="${color}"/>
+      <circle cx="0" cy="${h/2}" r="5" fill="${color}"/><circle cx="${w}" cy="${h/2}" r="5" fill="${color}"/>
+      <text x="18" y="${h/2-4}" class="nt">${title}</text>
+      <text x="18" y="${h/2+13}" class="ns">${sub}</text>${extra||''}
+    </g>`;
+  const TEAL='var(--amber)', VIO='var(--violet)';
+  box.innerHTML=`
+  <svg viewBox="0 0 1160 500" xmlns="http://www.w3.org/2000/svg" font-family="'Montserrat',system-ui,sans-serif">
+    <style>
+      .nt{fill:var(--ink);font-size:13px;font-weight:600}.ns{fill:var(--muted);font-size:10.5px}
+      .lbl{fill:var(--muted);font-size:11px;font-weight:600;letter-spacing:.08em}
+      .e{fill:none;stroke:var(--line);stroke-width:2}.et{fill:none;stroke:var(--amber);stroke-width:2;opacity:.7}
+      .ev{fill:none;stroke:var(--violet);stroke-width:2;opacity:.7}.dash{stroke-dasharray:5 5}
+    </style>
+    <text x="40" y="18" class="lbl" fill="var(--amber)">ГЕНЕРАЦИЯ УРОКА</text>
+    <text x="300" y="374" class="lbl" fill="var(--amber)">ЧТО ПРОХОДИТ ПОЛЬЗОВАТЕЛЬ</text>
+    <path class="et" d="M215 60 C262 60 262 190 300 190"/>
+    <path class="et" d="M215 128 C262 128 262 190 300 190"/>
+    <path class="ev" d="M215 196 C262 196 262 190 300 190"/>
+    <path class="ev" d="M215 264 C262 264 262 190 300 190"/>
+    <path class="ev" d="M215 332 C262 332 262 190 300 190"/>
+    <path class="et" d="M487 190 C516 190 516 190 545 190"/>
+    <path class="et" d="M697 190 C726 190 726 190 755 190"/>
+    <path class="et dash" d="M843 220 C843 320 388 300 388 372"/>
+    <path class="e" d="M478 424 C500 424 500 424 522 424"/>
+    <path class="e" d="M700 424 C722 424 722 424 744 424"/>
+    <path class="e" d="M922 424 C944 424 944 424 966 424"/>
+    ${node(40,38,175,44,TEAL,'Диагноз','слабое место')}
+    ${node(40,106,175,44,TEAL,'Твоё дело','ниша + профиль')}
+    ${node(40,174,175,44,VIO,'План темы','понятия и глубина')}
+    ${node(40,242,175,44,VIO,'Кривая сложности',`${d.start} → ${d.end}`,`gotoEditor('diffCard')`)}
+    ${node(40,310,175,44,VIO,'Правила · веса',`${en} вкл · ${top}`,`gotoEditor('rulesCard')`)}
+    <g transform="translate(300,140)"><rect width="187" height="100" rx="14" fill="var(--surf2)" stroke="var(--amber)"/><circle cx="0" cy="50" r="5" fill="var(--amber)"/><circle cx="187" cy="50" r="5" fill="var(--amber)"/><text x="20" y="46" class="nt">Сборщик промпта</text><text x="20" y="63" class="ns">lessonSystem</text><text x="20" y="80" class="ns">веса → приоритеты</text></g>
+    ${node(545,160,152,60,TEAL,'LLM','assessor-модель')}
+    ${node(755,160,176,60,TEAL,'Урок','шаги · квиз · задание')}
+    <rect x="620" y="112" width="150" height="22" rx="11" fill="var(--surf)" stroke="var(--line)"/><text x="636" y="127" class="ns">× для каждого урока</text>
+    ${node(300,400,178,48,TEAL,'Урок · шаги','читаешь по частям')}
+    ${node(522,400,178,48,TEAL,'Квиз','неочевидный')}
+    ${node(744,400,178,48,TEAL,'Домашка','на своём деле')}
+    ${node(966,400,178,48,TEAL,'Разбор темы','в конце курса')}
+  </svg>`;
 }
 
 function onDiff(){
