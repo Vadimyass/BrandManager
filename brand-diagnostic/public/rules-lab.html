@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Melyo · Лаборатория правил курса</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root{
+    --bg:#0F1420;--surface:#1B2130;--surface2:#242B3B;--ink:#EAECEF;--muted:#8C93A3;--muted-d:#6A7180;
+    --line:#2A3040;--amber:#2DD4BF;--violet:#8B80E0;--no:#E0736A;
+    --disp:'Montserrat',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--disp);padding:clamp(16px,4vw,40px);line-height:1.5}
+  h1{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 22px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:16px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input[type=text],input[type=password],input[type=number],textarea,select{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    font-family:var(--disp);font-size:14px;padding:9px 12px;outline:none}
+  textarea{min-height:60px;resize:vertical;line-height:1.45}
+  input:focus,textarea:focus{border-color:var(--amber)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:180px}
+  button{font-family:var(--disp);font-weight:600;font-size:14px;border-radius:999px;border:1px solid var(--line);
+    background:var(--surface2);color:var(--ink);padding:10px 18px;cursor:pointer;transition:all .15s}
+  button:hover{border-color:var(--ink)}
+  button.pri{background:var(--amber);color:#0F1420;border-color:var(--amber)}
+  button.ghost{background:transparent}
+  button.sm{padding:5px 12px;font-size:12.5px}
+  button.danger{color:var(--no);border-color:transparent;background:transparent}
+  .status{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .status.ok{color:var(--amber)}
+  .status.err{color:var(--no)}
+  .rule{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:var(--bg)}
+  .rule.off{opacity:.5}
+  .rule-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .rname{font-weight:600;font-size:15px;flex:1;min-width:120px}
+  .cat{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--violet);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+  .wwrap{display:flex;align-items:center;gap:10px;margin:6px 0}
+  input[type=range]{flex:1;accent-color:var(--amber);height:4px}
+  .wval{font-family:var(--mono);font-size:13px;width:34px;text-align:right}
+  .badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .b0{color:var(--muted-d);border:1px solid var(--line)}
+  .b1{color:var(--muted)}.b2{color:var(--ink)}.b3{color:var(--amber)}.b4{color:#0F1420;background:var(--amber)}
+  .toggle{cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+  .toggle.on{color:var(--amber);border-color:rgba(45,212,191,.4)}
+  .grp-title{font-weight:700;font-size:13px;color:var(--muted);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.05em;font-size:11px}
+  .curve{display:flex;align-items:flex-end;gap:4px;height:80px;margin:10px 0}
+  .cbar{flex:1;background:linear-gradient(180deg,var(--amber),var(--violet));border-radius:3px 3px 0 0;min-height:3px;position:relative}
+  .cbar span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted)}
+  pre{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--bg);padding:14px 0 4px;margin-top:8px}
+  .hint{font-size:12px;color:var(--muted-d);margin-top:6px}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<h1>Лаборатория правил курса</h1>
+<p class="sub">Правила построения уроков как веса 1–100. Вес задаёт силу правила в промпте; сложность — отдельная кривая по ходу курса. Изменения влияют на генерацию новых курсов.</p>
+
+<div class="card">
+  <div class="eyebrow">Подключение</div>
+  <details id="connBox">
+    <summary id="connSummary">Настроить подключение к Supabase</summary>
+    <div class="row" style="margin-top:12px">
+      <div><label>Supabase URL</label><input type="text" id="supaUrl" placeholder="https://xxxx.supabase.co" /></div>
+      <div><label>anon / publishable ключ</label><input type="password" id="anonKey" placeholder="eyJ..." /></div>
+      <div><label>admin-ключ (для сохранения)</label><input type="password" id="adminKey" placeholder="CONFIG_ADMIN_KEY" /></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+      <button class="sm" onclick="saveConn()">Запомнить</button>
+      <button class="sm pri" onclick="load()">Загрузить правила</button>
+      <span class="status" id="connStatus"></span>
+    </div>
+    <div class="hint">URL и anon-ключ — из Supabase → Project Settings → API. admin-ключ — секрет CONFIG_ADMIN_KEY, который ты задал в функции. Хранится только в этом браузере.</div>
+  </details>
+</div>
+
+<div id="app" style="display:none">
+  <div class="card">
+    <div class="eyebrow">Кривая сложности</div>
+    <div class="row">
+      <div>
+        <label>Старт (первый урок): <b id="dsVal"></b>/100</label>
+        <input type="range" min="1" max="100" id="dStart" oninput="onDiff()" />
+      </div>
+      <div>
+        <label>Финал (последний урок): <b id="deVal"></b>/100</label>
+        <input type="range" min="1" max="100" id="dEnd" oninput="onDiff()" />
+      </div>
+      <div>
+        <label>Уроков в курсе (для превью)</label>
+        <input type="number" id="nLessons" min="2" max="20" value="10" oninput="render()" />
+      </div>
+    </div>
+    <div class="curve" id="curve"></div>
+    <div class="hint" id="diffPhrase"></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Правила (вес = сила в промпте)</div>
+    <div id="rules"></div>
+    <button class="sm ghost" style="margin-top:8px" onclick="addRule()">+ Добавить правило</button>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Живой превью промпта</div>
+    <label>Показать для урока: <b id="pvN">1</b> из <b id="pvT"></b></label>
+    <input type="range" min="1" id="pvLesson" value="1" oninput="renderPreview()" />
+    <pre id="preview"></pre>
+  </div>
+
+  <div class="actions">
+    <button class="pri" onclick="save()">Сохранить правила</button>
+    <button class="ghost" onclick="exportJson()">Экспорт JSON</button>
+    <button class="ghost" onclick="resetDefaults()">Сбросить к дефолту</button>
+    <span class="status" id="saveStatus"></span>
+  </div>
+</div>
+
+<script>
+const LS = "melyo_rules_conn";
+let cfg = null, defaults = null;
+
+function conn(){ try{return JSON.parse(localStorage.getItem(LS))||{}}catch{return{}} }
+function saveConn(){
+  const c={url:val("supaUrl").replace(/\/+$/,""),anon:val("anonKey"),admin:val("adminKey")};
+  localStorage.setItem(LS,JSON.stringify(c));
+  setStatus("connStatus","Сохранено","ok");
+}
+function val(id){return document.getElementById(id).value.trim()}
+function setStatus(id,txt,cls){const e=document.getElementById(id);e.textContent=txt;e.className="status "+(cls||"")}
+
+(function init(){
+  const c=conn();
+  supaUrl.value=c.url||""; anonKey.value=c.anon||""; adminKey.value=c.admin||"";
+  if(c.url&&c.anon){ load(); } else { document.getElementById("connBox").open=true; }
+})();
+
+async function api(bodyObj){
+  const c=conn();
+  if(!c.url||!c.anon) throw new Error("Заполни URL и anon-ключ");
+  const res=await fetch(c.url+"/functions/v1/api/config",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","apikey":c.anon,"Authorization":"Bearer "+c.anon},
+    body:JSON.stringify(bodyObj||{})
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||("HTTP "+res.status));
+  return data;
+}
+
+async function load(){
+  try{
+    setStatus("connStatus","Загружаю…");
+    const d=await api({});
+    cfg=d.config; defaults=d.defaults||d.config;
+    document.getElementById("app").style.display="block";
+    document.getElementById("connBox").open=false;
+    setStatus("connStatus","Загружено","ok");
+    render();
+  }catch(e){ setStatus("connStatus",String(e.message||e),"err"); }
+}
+
+// ——— зеркало сборки промпта из config.ts ———
+function intensityPrefix(w){
+  if(w<12) return null;
+  if(w<35) return "Желательно";
+  if(w<65) return "Важно";
+  if(w<88) return "ОБЯЗАТЕЛЬНО";
+  return "КРИТИЧЕСКИ ВАЖНО (в первую очередь)";
+}
+function badgeClass(w){ if(w<12)return"b0"; if(w<35)return"b1"; if(w<65)return"b2"; if(w<88)return"b3"; return"b4"; }
+function badgeText(w){ return intensityPrefix(w)||"выкл (ниже порога)"; }
+function diffLevel(pos,total){
+  const s=cfg.difficulty.start,e=cfg.difficulty.end;
+  if(total<=1) return Math.round(e);
+  const k=Math.min(Math.max(pos,0),total-1)/(total-1);
+  return Math.round(s+(e-s)*k);
+}
+function diffPhrase(l){
+  if(l<25)return"очень просто, для полного новичка; квиз мягкий, но не пустой";
+  if(l<45)return"просто; квиз с одной небольшой ловушкой";
+  if(l<65)return"средне; квиз требует применить идею к новой ситуации";
+  if(l<82)return"сложно; квиз с неочевидной развязкой, интуитивный ответ часто неверен";
+  return"очень сложно; тонкие различия, интуиция обычно подводит";
+}
+function rulesBlock(){
+  return cfg.rules.filter(r=>r.enabled&&r.weight>=12).slice().sort((a,b)=>b.weight-a.weight)
+    .map(r=>"- ["+intensityPrefix(r.weight)+"] "+r.text).join("\n");
+}
+
+// ——— рендер ———
+function render(){
+  if(!cfg) return;
+  document.getElementById("dStart").value=cfg.difficulty.start;
+  document.getElementById("dEnd").value=cfg.difficulty.end;
+  document.getElementById("dsVal").textContent=cfg.difficulty.start;
+  document.getElementById("deVal").textContent=cfg.difficulty.end;
+  renderRules(); renderCurve(); renderPreview();
+}
+
+function onDiff(){
+  cfg.difficulty.start=+document.getElementById("dStart").value;
+  cfg.difficulty.end=+document.getElementById("dEnd").value;
+  document.getElementById("dsVal").textContent=cfg.difficulty.start;
+  document.getElementById("deVal").textContent=cfg.difficulty.end;
+  renderCurve(); renderPreview();
+}
+
+function renderCurve(){
+  const total=Math.max(2,+document.getElementById("nLessons").value||10);
+  const el=document.getElementById("curve"); el.innerHTML="";
+  for(let i=0;i<total;i++){
+    const l=diffLevel(i,total);
+    const b=document.createElement("div"); b.className="cbar"; b.style.height=(l)+"%";
+    b.innerHTML='<span>'+l+'</span>'; b.title="Урок "+(i+1)+": "+l+"/100";
+    el.appendChild(b);
+  }
+  document.getElementById("diffPhrase").textContent=
+    "Урок 1 → "+diffPhrase(diffLevel(0,total))+" · Последний → "+diffPhrase(diffLevel(total-1,total));
+  const pv=document.getElementById("pvLesson"); pv.max=total; document.getElementById("pvT").textContent=total;
+  if(+pv.value>total) pv.value=total;
+}
+
+function renderRules(){
+  const box=document.getElementById("rules"); box.innerHTML="";
+  const cats=[...new Set(cfg.rules.map(r=>r.category))];
+  cats.forEach(cat=>{
+    const h=document.createElement("div"); h.className="grp-title"; h.textContent=cat; box.appendChild(h);
+    cfg.rules.forEach((r,idx)=>{
+      if(r.category!==cat) return;
+      const d=document.createElement("div"); d.className="rule"+(r.enabled?"":" off");
+      d.innerHTML=`
+        <div class="rule-top">
+          <input class="rname" style="flex:1;background:transparent;border:none;padding:0;font-weight:600" value="${esc(r.name)}" oninput="upd(${idx},'name',this.value)">
+          <input class="cat" style="width:120px" value="${esc(r.category)}" oninput="upd(${idx},'category',this.value)">
+          <span class="toggle ${r.enabled?'on':''}" onclick="upd(${idx},'enabled',${!r.enabled});render()">${r.enabled?'вкл':'выкл'}</span>
+          <button class="sm danger" onclick="delRule(${idx})">удалить</button>
+        </div>
+        <div class="wwrap">
+          <input type="range" min="0" max="100" value="${r.weight}" oninput="upd(${idx},'weight',+this.value);badge(${idx},+this.value)">
+          <span class="wval" id="wv${idx}">${r.weight}</span>
+          <span class="badge ${badgeClass(r.weight)}" id="bd${idx}">${badgeText(r.weight)}</span>
+        </div>
+        <textarea oninput="upd(${idx},'text',this.value)">${esc(r.text)}</textarea>`;
+      box.appendChild(d);
+    });
+  });
+}
+function badge(idx,w){
+  document.getElementById("wv"+idx).textContent=w;
+  const b=document.getElementById("bd"+idx); b.textContent=badgeText(w); b.className="badge "+badgeClass(w);
+  renderPreview();
+}
+function upd(i,k,v){ cfg.rules[i][k]=v; if(k==='text'||k==='name'||k==='category') renderPreview(); }
+function delRule(i){ cfg.rules.splice(i,1); render(); }
+function addRule(){
+  cfg.rules.push({id:"r"+Math.random().toString(36).slice(2,8),name:"Новое правило",category:"Прочее",weight:50,enabled:true,text:""});
+  render();
+}
+
+function renderPreview(){
+  if(!cfg) return;
+  const total=Math.max(2,+document.getElementById("nLessons").value||10);
+  const n=Math.min(+document.getElementById("pvLesson").value||1,total);
+  document.getElementById("pvN").textContent=n;
+  const lvl=diffLevel(n-1,total);
+  const txt=
+`ЦЕЛЕВАЯ СЛОЖНОСТЬ ЭТОГО УРОКА: ${lvl}/100 — ${diffPhrase(lvl)}.
+Держи планку ровно на этом уровне: не проще и не сложнее.
+
+ПРАВИЛА ПОСТРОЕНИЯ УРОКА (по силе важности):
+${rulesBlock()}`;
+  document.getElementById("preview").textContent=txt;
+}
+
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+async function save(){
+  try{
+    const c=conn();
+    if(!c.admin){ setStatus("saveStatus","Нужен admin-ключ (раздел «Подключение»)","err"); document.getElementById("connBox").open=true; return; }
+    setStatus("saveStatus","Сохраняю…");
+    await api({action:"save",adminKey:c.admin,config:cfg});
+    setStatus("saveStatus","Сохранено ✓ Новые курсы пойдут по этим правилам","ok");
+  }catch(e){ setStatus("saveStatus",String(e.message||e),"err"); }
+}
+function exportJson(){
+  const blob=new Blob([JSON.stringify(cfg,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="course-rules.json"; a.click();
+}
+function resetDefaults(){ if(defaults){ cfg=JSON.parse(JSON.stringify(defaults)); render(); setStatus("saveStatus","Сброшено к дефолту (не забудь «Сохранить»)","ok"); } }
+</script>
+</body>
+</html>

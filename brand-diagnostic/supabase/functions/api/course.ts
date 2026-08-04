@@ -1,5 +1,6 @@
 import { llmJson, type LlmUsage } from "./llm.ts";
 import { AXIS_NAMES, type Calibration, type Diagnosis, langRule } from "./agents.ts";
+import { buildRulesBlock, type CourseConfig, DEFAULT_CONFIG, difficultyLine } from "./config.ts";
 
 export interface QuizItem {
   q: string;
@@ -98,28 +99,13 @@ export function courseLength(axis: string): number {
   return planFor(axis).length;
 }
 
-const PLAIN_LANGUAGE_RULE = `ЯЗЫК: простые слова, как для друга без бизнес-образования. ЗАПРЕЩЕНЫ аббревиатуры и жаргон: MRR, LTV, CAC, churn, retention, burn rate, UX, лиды, performance, юнит-экономика. Вместо них человеческие слова.
-ДЕНЬГИ: аудитория — украинский рынок. Суммы в долларах ($) или гривнах (₴), НИКОГДА в рублях; без российских реалий.`;
-
-const DEPTH_RULES: Record<Depth, string> = {
-  intro: `Это первый (вводный) урок темы. Текст — простой, но квиз держи НЕОЧЕВИДНЫМ: интуитивный ответ должен быть неверным.
-- steps: 2 шага. Каждый шаг — 1–2 очень коротких предложения. Никаких терминов.
-- quiz: 1 вопрос средней сложности (не пересказ шагов). examples: []`,
-  core: `Это урок среднего уровня. Читатель уже освоил основы — опирайся на них.
-- steps: 3 шага. Каждый шаг — 1–2 коротких предложения, одна мысль на шаг.
-- quiz: 2 вопроса, каждый — про новую ситуацию, а не про историю. examples: 1 (case + why) только если реально помогает.`,
-  advanced: `Это продвинутый урок. Разбирай причину простыми словами, без воды.
-- steps: 3 шага. Каждый шаг — 1–2 коротких предложения, одна мысль на шаг.
-- quiz: 2 вопроса потоньше, с неочевидной развязкой. examples: 1 (case + why).`,
+// Структура урока (сколько экранов чтения и вопросов). Сложность и вербальные
+// правила теперь приходят из конфигурации весов (config.ts / таблица course_config).
+const DEPTH_STRUCTURE: Record<Depth, string> = {
+  intro: "СТРУКТУРА: 2 шага чтения (steps), 1 вопрос в квизе, examples: [].",
+  core: "СТРУКТУРА: 3 шага чтения (steps), 2 вопроса в квизе, examples: 0–1 (case + why).",
+  advanced: "СТРУКТУРА: 3 шага чтения (steps), 2 вопроса в квизе, examples: 0–1 (case + why).",
 };
-
-// Квиз проверяет ПРИМЕНЕНИЕ идеи, а не память. Иначе ответ очевиден и урок кажется пустым.
-const QUIZ_RULE = `КВИЗ — САМОЕ ВАЖНОЕ ДЛЯ ОЩУЩЕНИЯ ГЛУБИНЫ:
-- Каждый вопрос — НОВАЯ конкретная мини-ситуация (лучше из ниши пользователя), а НЕ пересказ истории и шагов урока.
-- Правильный ответ НЕЛЬЗЯ вычислить, просто повторив пример. Нужно применить идею.
-- Оба варианта должны звучать разумно и заманчиво. Неверный — это привлекательная ловушка, в которую реально попадает новичок («логично, но не работает»).
-- Запрещены формулировки, где один вариант очевидно «правильно-книжный», а другой явно глупый.
-- explain — коротко объясни, ПОЧЕМУ заманчивый вариант проигрывает.`;
 
 function lessonSystem(
   plan: LessonPlan,
@@ -127,36 +113,34 @@ function lessonSystem(
   niche: string | undefined,
   diagnosis: Diagnosis,
   position: { n: number; total: number; prevTerms: string[] },
+  cfg: CourseConfig,
   profile?: string,
 ): string {
   const already = position.prevTerms.length
-    ? `\nУЖЕ РАЗОБРАНО в прошлых уроках (НЕ повторяй эти понятия, истории и примеры — иди дальше и глубже): ${position.prevTerms.join("; ")}.`
+    ? `\nУЖЕ РАЗОБРАНО в прошлых уроках (не повторяй эти понятия, истории и примеры): ${position.prevTerms.join("; ")}.`
     : "";
   const profileLine = profile?.trim()
-    ? `\nТОЧНОЕ ДЕЛО ПОЛЬЗОВАТЕЛЯ (используй это в примерах и задании, говори про ИМЕННО это): ${profile.trim()}`
+    ? `\nТОЧНОЕ ДЕЛО ПОЛЬЗОВАТЕЛЯ (используй в примерах и задании, говори про ИМЕННО это): ${profile.trim()}`
     : "";
 
-  return `Ты — Мелио, тёплый и простой наставник. Пишешь для основателя, который в этой теме новичок. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.${profileLine}
+  const rulesBlock = buildRulesBlock(cfg.rules);
+  const diffLine = difficultyLine(position.n - 1, position.total, cfg);
+
+  return `Ты — Мелио, наставник по бизнес-мышлению. Пишешь для основателя, который в этой теме новичок. Ниша: ${niche ?? cal.industry} (${cal.model}). Его слабое место: ${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}, ${diagnosis.weakness.note}. Его сила: ${AXIS_NAMES[diagnosis.superpower.axis]} — ${diagnosis.superpower.title}.${profileLine}
 
 Это урок ${position.n} из ${position.total}. Новое понятие урока: «${plan.term}». Главная мысль: ${plan.focus}.
-${DEPTH_RULES[plan.depth]}${already}
+${DEPTH_STRUCTURE[plan.depth]}${already}
 
-${PLAIN_LANGUAGE_RULE}
+${diffLine}
 
-${QUIZ_RULE}
+ПРАВИЛА ПОСТРОЕНИЯ УРОКА (соблюдай по силе важности — префикс задаёт приоритет):
+${rulesBlock}
 
-ГЛАВНОЕ — ПРОЩЕ: короткие предложения, минимум слов, одна мысль на шаг. Никаких длинных абзацев. Человек читает урок «по чуть-чуть», шаг за шагом.
-
-Правила:
-- Обращайся на «ты», тепло, по-дружески, будто Мелио сидит рядом. Без менторства и лозунгов.
-- steps — это сам урок, разбитый на маленькие экраны. Каждый шаг читается за пару секунд. Главная история (с цифрами) — внутри шагов.
-- Каждый урок вводит НОВОЕ понятие. Не пересказывай прошлое.
-- В examples — максимум 1 короткий пример другого бренда БЕЗ цифр (или []).
-- task — конкретное простое действие с ЕГО продуктом в ЕГО нише.
-- scheme — 2–3 коротких подписи стрелками, только если помогает; иначе [].
-- summary — ОБЯЗАТЕЛЬНО, одна фраза «про что этот урок», до 80 знаков.
-- takeaway — ОБЯЗАТЕЛЬНО, одна ёмкая строка-вывод.
-- relevance — ОБЯЗАТЕЛЬНО, 1 предложение: как урок связан с его слабым местом «${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}».
+Поля-подсказки:
+- steps — это сам урок, разбитый на маленькие экраны; главная история (с цифрами) внутри шагов.
+- summary — одна фраза «про что урок», до 80 знаков. takeaway — ёмкий вывод одной строкой.
+- relevance — 1 предложение: как урок связан со слабым местом «${AXIS_NAMES[diagnosis.weakness.axis]} — ${diagnosis.weakness.title}».
+- scheme — 2–3 подписи стрелками только если помогает; иначе [].
 
 ИСТОРИЯ (единственный источник фактов):
 ${plan.anchor}
@@ -175,13 +159,14 @@ export async function runCourse(
   usage: LlmUsage[],
   lang?: string,
   profile?: string,
+  cfg: CourseConfig = DEFAULT_CONFIG,
 ): Promise<Lesson[]> {
   const plan = planFor(axis);
   const out: Lesson[] = [];
   for (let i = 0; i < plan.length; i += CONCURRENCY) {
     const batch = plan.slice(i, i + CONCURRENCY);
     const done = await Promise.all(
-      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile)),
+      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile, cfg)),
     );
     out.push(...done);
   }
@@ -197,6 +182,7 @@ export async function runLesson(
   usage: LlmUsage[],
   lang?: string,
   profile?: string,
+  cfg: CourseConfig = DEFAULT_CONFIG,
 ): Promise<Lesson> {
   const plan = planFor(axis);
   const total = plan.length;
@@ -205,7 +191,7 @@ export async function runLesson(
 
   const lesson = await llmJson<Lesson>(
     "assessor",
-    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }, profile) + langRule(lang),
+    lessonSystem(plan[i], cal, niche, diagnosis, { n: i + 1, total, prevTerms }, cfg, profile) + langRule(lang),
     `Диагноз фаундера: ${diagnosis.diagnosis}`,
     usage,
     1600,
