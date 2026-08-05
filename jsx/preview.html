@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Melyo JSX — проверка сборки</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F4F3FA;font-family:Montserrat,sans-serif}
+#err{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:#b00;padding:20px}</style>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<pre id="err"></pre>
+<script type="module">
+const REACT = 'https://esm.sh/react@18';
+const files = ['style-utils.js','PhoneFrame.jsx','BrowserFrame.jsx','MelyoMobileScreens.jsx','MelyoDesktopScreens.jsx'];
+const urls = {};
+try {
+  for (const f of files) {
+    let src = await (await fetch('./' + f)).text();
+    if (f.endsWith('.jsx')) src = Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
+    src = src.replace(/from ['"]react['"]/g, `from '${REACT}'`)
+             .replace(/from ['"]\.\/([\w-]+)['"]/g, (m, n) => `from '__${n}__'`);
+    urls[f.replace(/\.jsx?$/, '')] = src;
+  }
+  const built = {};
+  const order = ['style-utils','PhoneFrame','BrowserFrame','MelyoMobileScreens','MelyoDesktopScreens'];
+  for (const name of order) {
+    let src = urls[name];
+    src = src.replace(/'__([\w-]+)__'/g, (m, n) => `'${built[n]}'`);
+    built[name] = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  }
+  const React = (await import(REACT)).default;
+  const { createRoot } = await import('https://esm.sh/react-dom@18/client');
+  const Mobile = (await import(built.MelyoMobileScreens)).default;
+  const Desktop = (await import(built.MelyoDesktopScreens)).default;
+  createRoot(document.getElementById('root')).render(
+    React.createElement('div', null, React.createElement(Mobile), React.createElement(Desktop))
+  );
+} catch (e) {
+  document.getElementById('err').textContent = 'BUILD ERROR\n' + (e && e.stack || e);
+  console.error(e);
+}
+</script>
+</body>
+</html>

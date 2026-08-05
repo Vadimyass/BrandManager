@@ -51,7 +51,7 @@ function LangSwitch() {
 function Mascot({ size = 96 }) {
   return (
     <img
-      src={`${import.meta.env.BASE_URL}melyo-mascot.png`}
+      src={`${import.meta.env.BASE_URL}mascot-cool.png`}
       alt="Маскот Melyo"
       className="mascot"
       style={{ width: size, height: "auto" }}
@@ -165,7 +165,7 @@ function Quiz({ items, onDone }) {
         </div>
       </div>
       <div className="qz-side">
-        <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="qz-masc" />
+        <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" className="qz-masc" />
         {picked ? (
           <>
             <div className={"qz-verdict" + (isRight ? " ok" : " miss")}>{isRight ? t("quiz_right") : t("quiz_wrong")}</div>
@@ -309,7 +309,7 @@ function Deck({ questions, onDone, label, hint }) {
       )}
       {hint && (
         <div className="deckhint">
-          <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="dhmasc" />
+          <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" className="dhmasc" />
           <span>{hint}</span>
         </div>
       )}
@@ -738,12 +738,12 @@ export default function App() {
 
         {phase === "welcome" && (
           <div className="phase wl">
-            <div className="wl-brand"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="wl-brandimg" /><span>melyo</span><LangSwitch /></div>
+            <div className="wl-brand"><img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" className="wl-brandimg" /><span>melyo</span><LangSwitch /></div>
 
             <div className="wl-grid">
               <div className="wl-left">
                 <div className="wl-hero">
-                  <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Маскот Melyo" className="wl-mascot" />
+                  <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Маскот Melyo" className="wl-mascot" />
                   <div className="wl-bubble">{t("melio_hi")}</div>
                 </div>
                 <h1 className="wl-h1">{t("wl_h1")}</h1>
@@ -819,7 +819,7 @@ export default function App() {
           <div className="phase">
             <button className="btn ghost" style={{ marginBottom: 14 }} onClick={() => setPhase(prevPhase && prevPhase !== "cabinet" ? prevPhase : (result ? "result" : "welcome"))}>← Назад</button>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" style={{ width: 64, height: "auto", flex: "none" }} />
+              <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" style={{ width: 64, height: "auto", flex: "none" }} />
               <div>
                 <div className="eyebrow">Личный кабинет</div>
                 <h1 style={{ fontSize: "clamp(24px,3vw,34px)", margin: "6px 0 0" }}>Привет{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(" ")[0]}` : ""}</h1>
@@ -1136,7 +1136,7 @@ export default function App() {
             </div>
 
             <div className="off-side">
-              <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" className="off-masc" />
+              <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" className="off-masc" />
               <div className="price">{COURSE_PRICE}</div>
               <div className="pricenote">весь курс навсегда</div>
               <button className="btn amber" style={{ width: "100%", padding: "15px", marginTop: 8 }} onClick={beginCourse}>Начать курс — бесплатно</button>
@@ -1214,7 +1214,7 @@ export default function App() {
           <div className="phase meet">
             {meetStep === 0 ? (
               <div className="meet-intro">
-                <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc" />
+                <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Мелио" className="meet-masc" />
                 <div className="meet-bubble">{t("meet_intro")}</div>
                 <button className="btnp" style={{ maxWidth: 260 }} onClick={() => setMeetStep(1)}>{t("next")}</button>
               </div>
@@ -1227,7 +1227,7 @@ export default function App() {
                     {[0, 1, 2].map((d) => <span key={d} className={"d5" + (d <= qi ? " on" : "")} />)}
                   </div>
                   <div className="meet-row">
-                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
+                    <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Мелио" className="meet-masc sm" />
                     <div className="meet-bubble sm">{t(`meet_q${meetStep}`)}</div>
                   </div>
                   <input
@@ -1296,7 +1296,7 @@ export default function App() {
                     </div>
                   )}
                   {!(lesson.scheme?.length > 1) && !(lesson.examples?.length > 0) && (
-                    <div className="lsn-ph"><img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="" /></div>
+                    <div className="lsn-ph"><img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" /></div>
                   )}
                 </div>
 
@@ -1415,7 +1415,7 @@ export default function App() {
               return (
                 <div className="theme">
                   <div className="meet-row">
-                    <img src={`${import.meta.env.BASE_URL}melyo-mascot.png`} alt="Мелио" className="meet-masc sm" />
+                    <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Мелио" className="meet-masc sm" />
                     <div>
                       <div className="lsn-num" style={{ fontSize: "clamp(26px,4vw,40px)" }}>{t("theme_title")}</div>
                       <div className="lsn-lead" style={{ margin: 0 }}>{t("theme_sub")}</div>
