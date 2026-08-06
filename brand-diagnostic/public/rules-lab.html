@@ -123,20 +123,24 @@
     <div class="card">
       <div class="eyebrow">Тестовый урок · генерит по текущим (несохранённым) правилам</div>
       <div class="row">
+        <div><label>Движок</label>
+          <select id="tEngine" onchange="onEngine()"><option value="weights">Курс (веса)</option><option value="melio">Мелио (агент)</option></select>
+        </div>
         <div><label>Ниша / дело</label><input type="text" id="tNiche" placeholder="напр. кофейня на вынос" /></div>
         <div><label>Слабое место (ось)</label>
           <select id="tAxis"><option value="marketing">Маркетинг</option><option value="product">Продукт</option><option value="operations">Операционка</option><option value="brand">Бренд</option></select>
         </div>
         <div><label>Урок №</label><input type="number" id="tIndex" min="1" max="10" value="1" /></div>
+        <div id="tLevelWrap" style="display:none"><label>Уровень L1–L5</label><input type="number" id="tLevel" min="1" max="5" value="1" /></div>
         <div><label>Язык</label>
           <select id="tLang"><option value="uk">УКР</option><option value="ru" selected>РУС</option><option value="en">ENG</option></select>
         </div>
       </div>
       <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="pri" onclick="genTest()">Сгенерировать урок</button>
+        <button class="pri" onclick="runTest()">Сгенерировать урок</button>
         <span class="status" id="testStatus"></span>
       </div>
-      <div class="hint">Использует те же правила и кривую сложности, что открыты сейчас в редакторе — сохранять не обязательно. Один урок = один запрос к модели.</div>
+      <div class="hint" id="testHint">Использует те же правила и кривую сложности, что открыты сейчас в редакторе — сохранять не обязательно. Один урок = один запрос к модели.</div>
       <div id="testOut"></div>
     </div>
   </div>
@@ -273,6 +277,55 @@ function setTab(t){
   Object.entries(views).forEach(([k,id])=>document.getElementById(id).style.display=(k===t?'block':'none'));
   Object.entries(tabs).forEach(([k,id])=>document.getElementById(id).classList.toggle('on',k===t));
   if(t==='schema') renderSchema();
+}
+
+function onEngine(){
+  const melio=document.getElementById('tEngine').value==='melio';
+  document.getElementById('tLevelWrap').style.display=melio?'block':'none';
+  document.getElementById('testHint').textContent=melio
+    ? 'Агент Мелио (режим lesson): память профиля собирается из ниши/оси/уровня, факт истории берётся из плана. memory_delta показывается, но не сохраняется.'
+    : 'Использует те же правила и кривую сложности, что открыты сейчас в редакторе — сохранять не обязательно. Один урок = один запрос к модели.';
+}
+function runTest(){ document.getElementById('tEngine').value==='melio' ? genMelio() : genTest(); }
+
+async function genMelio(){
+  try{
+    const c=conn();
+    if(!c.url||!c.anon){ setStatus('testStatus','Заполни подключение','err'); return; }
+    setStatus('testStatus','Мелио думает… (10–30 сек)');
+    document.getElementById('testOut').innerHTML='';
+    const body={ mode:'lesson', niche:val('tNiche'), axis:document.getElementById('tAxis').value,
+      index:(+val('tIndex')||1)-1, level:+val('tLevel')||1, lang:document.getElementById('tLang').value };
+    const res=await fetch(c.url+"/functions/v1/api/melio",{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':c.anon,'Authorization':'Bearer '+c.anon},
+      body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+    renderMelio(data);
+    setStatus('testStatus','Готово ✓','ok');
+  }catch(e){ setStatus('testStatus',String(e.message||e),'err'); }
+}
+
+function renderMelio(d){
+  const out=document.getElementById('testOut');
+  const l=d&&d.lesson;
+  if(!l){ out.innerHTML='<div class="tl">Пустой ответ агента.</div>'; return; }
+  const steps=(l.steps||[]).map((s,i)=>`<p class="tl-step"><span class="tl-sn">${i+1}</span>${esc(s)}</p>`).join('');
+  const q=l.quiz||{};
+  const opts=(q.options||[]).map((o,i)=>`<div class="tl-opt ${i===q.correct?'ok':''}">${esc(o)}${i===q.correct?' ✓':''}</div>`).join('');
+  const delta=d.memory_delta||{};
+  const dl=[...(delta.add||[]).map(x=>'+ '+(x.path||'')+' = '+JSON.stringify(x.value)+' ['+(x.src||'')+']'),
+            ...(delta.update||[]).map(x=>'~ '+(x.path||'')+' = '+JSON.stringify(x.value))].map(esc).join('<br>')||'—';
+  out.innerHTML=`
+    <div class="tl">
+      <div class="tl-num">Мелио · L${(d.meta&&d.meta.level_targeted)||'?'}</div>
+      <div class="tl-title">${esc(l.title||'')}</div>
+      ${steps}
+      ${l.story?`<div class="tl-box"><b>История:</b> ${esc(l.story.text||'')} <i style="color:var(--muted)">(${esc(l.story.fact_ref||'')})</i></div>`:''}
+      ${q.situation?`<div class="tl-q"><div class="tl-qq">${esc(q.situation)}</div>${opts}<div class="tl-ex">${esc(q.explain||'')}</div></div>`:''}
+      ${l.task?`<div class="tl-box tl-take"><b>Задание:</b> ${esc(l.task)}</div>`:''}
+      <div class="tl-box" style="font-family:var(--mono);font-size:12px"><b style="color:var(--muted)">meta:</b> weakspot=${esc((d.meta&&d.meta.weakspot)||'')}<br><b style="color:var(--muted)">memory_delta:</b><br>${dl}</div>
+    </div>`;
 }
 
 async function genTest(){

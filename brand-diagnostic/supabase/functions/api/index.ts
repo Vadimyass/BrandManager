@@ -13,7 +13,8 @@ import {
   runMethodist,
   type SeedAnswer,
 } from "./agents.ts";
-import { courseLength, runCourse, runLesson } from "./course.ts";
+import { courseLength, planFor, runCourse, runLesson } from "./course.ts";
+import { runMelio } from "./melio.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
 import { type CourseConfig, DEFAULT_CONFIG, normalizeConfig } from "./config.ts";
 import type { LlmUsage } from "./llm.ts";
@@ -56,6 +57,8 @@ Deno.serve(async (req) => {
         return json(await config(req, body));
       case "testlesson":
         return json(await testLesson(body));
+      case "melio":
+        return json(await melio(body));
       case "track":
         return json(await track(body));
       case "feedback":
@@ -170,6 +173,40 @@ async function testLesson(body: {
   const usage: LlmUsage[] = [];
   const lesson = await runLesson(index, axis, cal, niche, diagnosis, usage, body.lang, body.profile, cfg);
   return { status: "ok", lesson, usage };
+}
+
+// Агент Мелио (прототип lesson-режима). Принимает готовые memory/input ЛИБО простые
+// поля теста (ниша, ось, уровень, № урока) — тогда собираем memory/input на сервере,
+// а факт для истории берём из анкора плана. memory_delta пока только возвращаем.
+async function melio(body: {
+  mode?: string; lang?: string;
+  memory?: unknown; input?: unknown;
+  niche?: string; axis?: string; level?: number; index?: number;
+}) {
+  const mode = (["lesson", "review", "reassess"].includes(body.mode ?? "") ? body.mode : "lesson") as "lesson" | "review" | "reassess";
+  const axes = ["product", "marketing", "operations", "brand"];
+  const axis = axes.includes(body.axis ?? "") ? body.axis! : "marketing";
+  const plan = planFor(axis);
+  const idx = Math.min(Math.max(Math.floor(Number(body.index) || 0), 0), plan.length - 1);
+  const niche = String(body.niche ?? "").slice(0, 120);
+  const level = Math.min(Math.max(Math.floor(Number(body.level) || 1), 1), 5);
+
+  const memory = body.memory ?? {
+    business: { niche: niche || "малый бизнес", src: niche ? "stated" : "inferred" },
+    level,
+    focus_weakspot: axis,
+    learning: { concepts_used: [], stories_used: [], quiz_log: [], difficulty_pos: (level - 1) * 20 + 20 },
+    diagnostic: { history: [] },
+    work: [],
+  };
+  const input = body.input ?? {
+    facts: [{ id: `f-${axis}-${idx}`, text: plan[idx].anchor, src: "observed" }],
+    hint: { term: plan[idx].term, focus: plan[idx].focus },
+  };
+
+  const usage: LlmUsage[] = [];
+  const out = await runMelio(mode, memory, input, usage, body.lang);
+  return { status: "ok", ...out, usage };
 }
 
 // Правила построения курса. GET — читать (не секрет), POST — сохранять по admin-ключу.
