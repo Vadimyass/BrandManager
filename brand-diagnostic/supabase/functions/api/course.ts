@@ -1,6 +1,7 @@
 import { llmJson, type LlmUsage } from "./llm.ts";
 import { AXIS_NAMES, type Calibration, type Diagnosis, langRule } from "./agents.ts";
 import { buildRulesBlock, type CourseConfig, DEFAULT_CONFIG, difficultyLine } from "./config.ts";
+import { runMelio } from "./melio.ts";
 
 export interface QuizItem {
   q: string;
@@ -166,11 +167,98 @@ export async function runCourse(
   for (let i = 0; i < plan.length; i += CONCURRENCY) {
     const batch = plan.slice(i, i + CONCURRENCY);
     const done = await Promise.all(
-      batch.map((_, j) => runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile, cfg)),
+      batch.map((_, j) =>
+        cfg.engine === "weights"
+          ? runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile, cfg)
+          : melioLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile)
+      ),
     );
     out.push(...done);
   }
   return out.sort((a, b) => a.index - b.index);
+}
+
+// Уровень L1–L5 по позиции урока в теме.
+function levelFor(i: number, total: number): number {
+  if (total <= 1) return 3;
+  return Math.min(5, Math.max(1, 1 + Math.round((i / (total - 1)) * 4)));
+}
+
+// Один урок через агента Мелио + маппинг его JSON в форму Lesson, которую рисует приложение.
+// Историю (факт) даём из анкора плана — Мелио берёт факты только из input.
+async function melioLesson(
+  index: number,
+  axis: string,
+  cal: Calibration,
+  niche: string | undefined,
+  diagnosis: Diagnosis,
+  usage: LlmUsage[],
+  lang?: string,
+  profile?: string,
+): Promise<Lesson> {
+  const plan = planFor(axis);
+  const total = plan.length;
+  const i = Math.min(Math.max(index, 0), total - 1);
+  const p = plan[i];
+  const prevTerms = plan.slice(0, i).map((x) => x.term);
+
+  const memory = {
+    business: { niche: niche || cal.industry, model: cal.model, profile: profile || null },
+    level: levelFor(i, total),
+    focus_weakspot: axis,
+    learning: { concepts_used: prevTerms, stories_used: plan.slice(0, i).map((_, k) => `f-${axis}-${k}`), quiz_log: [], difficulty_pos: Math.round((i / Math.max(total - 1, 1)) * 100) },
+    diagnostic: {
+      weakness: { axis: diagnosis.weakness.axis, title: diagnosis.weakness.title, note: diagnosis.weakness.note },
+      superpower: { axis: diagnosis.superpower.axis, title: diagnosis.superpower.title },
+      summary: diagnosis.diagnosis,
+    },
+    work: [],
+  };
+  const input = {
+    facts: [{ id: `f-${axis}-${i}`, text: p.anchor, src: "observed" }],
+    hint: { term: p.term, focus: p.focus },
+  };
+
+  const res = await runMelio("lesson", memory, input, usage, lang);
+  const m = (res?.lesson ?? {}) as {
+    title?: string; steps?: string[];
+    story?: { text?: string; fact_ref?: string };
+    quiz?: { situation?: string; options?: string[]; correct?: number; explain?: string };
+    task?: string;
+  };
+
+  const steps = Array.isArray(m.steps) ? m.steps.filter((x) => typeof x === "string" && x.trim()).slice(0, 5) : [];
+  if (m.story?.text) steps.push(String(m.story.text));
+  const opts = Array.isArray(m.quiz?.options) ? m.quiz!.options! : [];
+  const quiz = m.quiz?.situation && opts.length >= 2
+    ? [{
+      q: String(m.quiz.situation),
+      left: String(opts[0]),
+      right: String(opts[1]),
+      correct: (Number(m.quiz.correct) === 1 ? "right" : "left") as "left" | "right",
+      explain: String(m.quiz.explain ?? ""),
+    }]
+    : [];
+
+  return {
+    index: i,
+    total,
+    title: m.title || p.term,
+    summary: p.focus,
+    stat: "",
+    statNote: "",
+    steps: steps.length ? steps : [p.focus],
+    body: "",
+    turn: "",
+    term: p.term,
+    termNote: p.focus,
+    scheme: [],
+    examples: [],
+    task: m.task || `Сделай маленький шаг по теме «${p.term}» на своём продукте.`,
+    quiz,
+    takeaway: p.focus,
+    relevance: `Это шаг по твоему слабому месту: ${AXIS_NAMES[axis]} — ${diagnosis.weakness.title}.`,
+  };
 }
 
 export async function runLesson(

@@ -147,7 +147,13 @@
 
   <div id="editorView">
   <div class="card" id="diffCard">
-    <div class="eyebrow">Кривая сложности</div>
+    <div class="eyebrow">Движок и сложность</div>
+    <div class="row" style="margin-bottom:14px">
+      <div><label>Движок генерации курса</label>
+        <select id="cEngine" onchange="cfg.engine=this.value"><option value="melio">Мелио (агент-наставник)</option><option value="weights">Старый (веса)</option></select>
+        <div class="hint">Мелио — новый агент с характером и памятью. «Веса» — прежний движок по правилам ниже. Правила и кривая влияют только на движок «Веса».</div>
+      </div>
+    </div>
     <div class="row">
       <div>
         <label>Старт (первый урок): <b id="dsVal"></b>/100</label>
@@ -268,6 +274,7 @@ function render(){
   document.getElementById("dEnd").value=cfg.difficulty.end;
   document.getElementById("dsVal").textContent=cfg.difficulty.start;
   document.getElementById("deVal").textContent=cfg.difficulty.end;
+  if(document.getElementById("cEngine")) document.getElementById("cEngine").value=cfg.engine||"melio";
   renderRules(); renderCurve(); renderPreview(); renderSchema();
 }
 

@@ -13,12 +13,14 @@ export interface RuleItem {
 
 export interface CourseConfig {
   version: number;
+  engine: "melio" | "weights"; // melio — агент-наставник; weights — старый движок по весам
   difficulty: { start: number; end: number }; // 1..100 на первом и последнем уроке
   rules: RuleItem[];
 }
 
 export const DEFAULT_CONFIG: CourseConfig = {
   version: 1,
+  engine: "melio",
   difficulty: { start: 35, end: 85 },
   rules: [
     { id: "plain_language", name: "Простой язык", category: "Язык", weight: 85, enabled: true, text: "Пиши простыми словами, как для друга без бизнес-образования. Без аббревиатур и жаргона (MRR, LTV, CAC, churn, retention, UX, юнит-экономика) — только человеческие слова." },
@@ -85,6 +87,7 @@ export function normalizeConfig(raw: unknown): CourseConfig {
   const rules = Array.isArray(c.rules) && c.rules.length ? c.rules : DEFAULT_CONFIG.rules;
   return {
     version: c.version ?? DEFAULT_CONFIG.version,
+    engine: c.engine === "weights" ? "weights" : "melio",
     difficulty: {
       start: clamp(diff.start ?? 35),
       end: clamp(diff.end ?? 85),
