@@ -81,5 +81,5 @@ export function runMelio(
 ): Promise<MelioResult> {
   const system = MELIO_SYSTEM + (lang ? langRule(lang) : "");
   const user = JSON.stringify({ mode, memory, input });
-  return llmJson<MelioResult>("assessor", system, user, usage, 1600);
+  return llmJson<MelioResult>("assessor", system, user, usage, 1200);
 }

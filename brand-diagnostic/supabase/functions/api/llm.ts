@@ -42,9 +42,9 @@ async function callModel(
   maxTokens: number,
   usageLog: LlmUsage[],
 ): Promise<string> {
-  const body = JSON.stringify({
+  const mkBody = (mt: number) => JSON.stringify({
     model,
-    max_tokens: maxTokens,
+    max_tokens: mt,
     temperature: 0.2,
     messages: [
       { role: "system", content: systemContent(model, system) },
@@ -52,6 +52,8 @@ async function callModel(
     ],
   });
 
+  let mt = maxTokens;
+  let budgetSqueezed = false;
   // Бесплатные модели часто отдают 429/503 при всплеске — повторяем с нарастающей паузой.
   const MAX_ATTEMPTS = 4;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -61,7 +63,7 @@ async function callModel(
         Authorization: `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
         "Content-Type": "application/json",
       },
-      body,
+      body: mkBody(mt),
     });
 
     if (res.ok) {
@@ -71,6 +73,23 @@ async function callModel(
     }
 
     const text = await res.text();
+
+    // 402 — не хватает баланса/дневного лимита. Если провайдер сказал, сколько можем себе позволить,
+    // один раз ужимаем max_tokens под этот бюджет и повторяем; иначе — понятная ошибка.
+    if (res.status === 402 && !budgetSqueezed) {
+      const afford = Number(text.match(/can only afford (\d+)/i)?.[1]);
+      if (afford && afford > 350 && afford < mt) {
+        mt = afford - 32;
+        budgetSqueezed = true;
+        console.warn(`OpenRouter 402 (${role}/${model}): сжимаю max_tokens до ${mt} и повторяю`);
+        continue;
+      }
+      throw new Error(
+        `Недостаточно кредитов OpenRouter (${role}/${model}). Пополни баланс или подними дневной лимит ключа на openrouter.ai, ` +
+          `либо переключи модель роли на дешевле: supabase secrets set MODEL_${role.toUpperCase()}=<model>.`,
+      );
+    }
+
     const retriable = res.status === 429 || res.status === 503 || res.status === 502;
     if (!retriable || attempt === MAX_ATTEMPTS) {
       throw new Error(`OpenRouter ${res.status} (${role}/${model}): ${text}`);
