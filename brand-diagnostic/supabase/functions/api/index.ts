@@ -15,6 +15,7 @@ import {
 } from "./agents.ts";
 import { courseLength, planFor, runCourse, runLesson } from "./course.ts";
 import { runMelio } from "./melio.ts";
+import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
 import { type CourseConfig, DEFAULT_CONFIG, normalizeConfig } from "./config.ts";
 import type { LlmUsage } from "./llm.ts";
@@ -132,7 +133,10 @@ async function diagnose(body: DiagnosePayload) {
     .single();
   if (error) throw error;
 
-  return { status: "ok", id: data.id, result: { ...diagnosis, sprints } };
+  // Начальная память Мелио — из диагноза. Клиент сохранит её в progress.melio_memory.
+  const memory = buildInitialMemory({ diagnosis, niche: body.niche, model: body.calibration.model });
+
+  return { status: "ok", id: data.id, result: { ...diagnosis, sprints }, memory };
 }
 
 async function loadConfig(): Promise<CourseConfig> {
@@ -175,13 +179,14 @@ async function testLesson(body: {
   return { status: "ok", lesson, usage };
 }
 
-// Агент Мелио (прототип lesson-режима). Принимает готовые memory/input ЛИБО простые
-// поля теста (ниша, ось, уровень, № урока) — тогда собираем memory/input на сервере,
-// а факт для истории берём из анкора плана. memory_delta пока только возвращаем.
+// Агент Мелио — все три режима. Память приходит от клиента (progress.melio_memory) либо
+// собирается из простых полей теста. Агент возвращает memory_delta — применяем безопасно
+// и отдаём memory_new (его сохраняет клиент под своим RLS).
 async function melio(body: {
   mode?: string; lang?: string;
   memory?: unknown; input?: unknown;
   niche?: string; axis?: string; level?: number; index?: number;
+  artifact?: string; answers?: unknown[];
 }) {
   const mode = (["lesson", "review", "reassess"].includes(body.mode ?? "") ? body.mode : "lesson") as "lesson" | "review" | "reassess";
   const axes = ["product", "marketing", "operations", "brand"];
@@ -191,22 +196,25 @@ async function melio(body: {
   const niche = String(body.niche ?? "").slice(0, 120);
   const level = Math.min(Math.max(Math.floor(Number(body.level) || 1), 1), 5);
 
-  const memory = body.memory ?? {
-    business: { niche: niche || "малый бизнес", src: niche ? "stated" : "inferred" },
-    level,
-    focus_weakspot: axis,
-    learning: { concepts_used: [], stories_used: [], quiz_log: [], difficulty_pos: (level - 1) * 20 + 20 },
-    diagnostic: { history: [] },
-    work: [],
-  };
-  const input = body.input ?? {
-    facts: [{ id: `f-${axis}-${idx}`, text: plan[idx].anchor, src: "observed" }],
-    hint: { term: plan[idx].term, focus: plan[idx].focus },
-  };
+  const memory = (body.memory as MelioMemory) ?? buildInitialMemory({ niche, level });
+  if (!body.memory) memory.focus_weakspot = axis;
+
+  let input: unknown;
+  if (mode === "review") {
+    input = { artifact: String(body.artifact ?? "").slice(0, 6000) };
+  } else if (mode === "reassess") {
+    input = { answers: Array.isArray(body.answers) ? body.answers.slice(0, 40) : [], artifact: String(body.artifact ?? "").slice(0, 6000) };
+  } else {
+    input = body.input ?? {
+      facts: [{ id: `f-${axis}-${idx}`, text: plan[idx].anchor, src: "observed" }],
+      hint: { term: plan[idx].term, focus: plan[idx].focus },
+    };
+  }
 
   const usage: LlmUsage[] = [];
   const out = await runMelio(mode, memory, input, usage, body.lang);
-  return { status: "ok", ...out, usage };
+  const memory_new = applyDelta(memory, out.memory_delta);
+  return { status: "ok", ...out, memory_new, usage };
 }
 
 // Правила построения курса. GET — читать (не секрет), POST — сохранять по admin-ключу.

@@ -519,6 +519,7 @@ export default function App() {
         superLabel: AXIS_LABELS[res.result?.superpower?.axis] ?? "",
         diagnosisAt: new Date().toISOString(),
         maxLesson: 0, homework: {},
+        melioMemory: res.memory ?? null,
       });
       setPhase("result");
     });
@@ -597,6 +598,18 @@ export default function App() {
       quizCorrect: correct,
       quizTotal: items.length,
     });
+    // Память Мелио копит реальные ответы: quiz_log + пройденные понятия + сдвиг сложности.
+    const mem = progress?.melioMemory;
+    if (mem) {
+      const learning = mem.learning || {};
+      const perfect = correct === items.length && items.length > 0;
+      const quiz_log = [...(learning.quiz_log || []), { lesson: lesson.index + 1, correct: perfect, note: `${correct}/${items.length}` }].slice(-50);
+      const concepts_used = Array.from(new Set([...(learning.concepts_used || []), lesson.term])).slice(-100);
+      const dp = Number(learning.difficulty_pos) || 30;
+      const difficulty_pos = Math.min(100, Math.max(0, dp + (perfect ? 5 : correct === 0 ? -8 : 1)));
+      persist({ melioMemory: { ...mem, learning: { ...learning, quiz_log, concepts_used, difficulty_pos } } });
+    }
+
     // Подытог после каждого урока не показываем — «чему научились» соберём в разбор темы в конце.
     if (lesson.task) setLessonStage("homework");
     else finishLesson();

@@ -132,10 +132,14 @@
         </div>
         <div><label>Урок №</label><input type="number" id="tIndex" min="1" max="10" value="1" /></div>
         <div id="tLevelWrap" style="display:none"><label>Уровень L1–L5</label><input type="number" id="tLevel" min="1" max="5" value="1" /></div>
+        <div id="tModeWrap" style="display:none"><label>Режим Мелио</label>
+          <select id="tMode" onchange="onMode()"><option value="lesson">lesson</option><option value="review">review</option><option value="reassess">reassess</option></select>
+        </div>
         <div><label>Язык</label>
           <select id="tLang"><option value="uk">УКР</option><option value="ru" selected>РУС</option><option value="en">ENG</option></select>
         </div>
       </div>
+      <div id="tArtifactWrap" style="display:none;margin-top:10px"><label>Работа / текст пользователя (для review / reassess)</label><textarea id="tArtifact" placeholder="Вставь текст, который прислал бы пользователь — био, описание, оффер…"></textarea></div>
       <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="pri" onclick="runTest()">Сгенерировать урок</button>
         <span class="status" id="testStatus"></span>
@@ -289,9 +293,16 @@ function setTab(t){
 function onEngine(){
   const melio=document.getElementById('tEngine').value==='melio';
   document.getElementById('tLevelWrap').style.display=melio?'block':'none';
+  document.getElementById('tModeWrap').style.display=melio?'block':'none';
+  onMode();
   document.getElementById('testHint').textContent=melio
-    ? 'Агент Мелио (режим lesson): память профиля собирается из ниши/оси/уровня, факт истории берётся из плана. memory_delta показывается, но не сохраняется.'
+    ? 'Агент Мелио: память собирается из ниши/оси/уровня, факт истории — из плана. memory_delta применяется и показывается как memory_new (в тесте не сохраняется).'
     : 'Использует те же правила и кривую сложности, что открыты сейчас в редакторе — сохранять не обязательно. Один урок = один запрос к модели.';
+}
+function onMode(){
+  const melio=document.getElementById('tEngine').value==='melio';
+  const mode=document.getElementById('tMode').value;
+  document.getElementById('tArtifactWrap').style.display=(melio&&mode!=='lesson')?'block':'none';
 }
 function runTest(){ document.getElementById('tEngine').value==='melio' ? genMelio() : genTest(); }
 
@@ -301,8 +312,9 @@ async function genMelio(){
     if(!c.url||!c.anon){ setStatus('testStatus','Заполни подключение','err'); return; }
     setStatus('testStatus','Мелио думает… (10–30 сек)');
     document.getElementById('testOut').innerHTML='';
-    const body={ mode:'lesson', niche:val('tNiche'), axis:document.getElementById('tAxis').value,
-      index:(+val('tIndex')||1)-1, level:+val('tLevel')||1, lang:document.getElementById('tLang').value };
+    const body={ mode:document.getElementById('tMode').value, niche:val('tNiche'), axis:document.getElementById('tAxis').value,
+      index:(+val('tIndex')||1)-1, level:+val('tLevel')||1, lang:document.getElementById('tLang').value,
+      artifact:val('tArtifact') };
     const res=await fetch(c.url+"/functions/v1/api/melio",{method:'POST',
       headers:{'Content-Type':'application/json','apikey':c.anon,'Authorization':'Bearer '+c.anon},
       body:JSON.stringify(body)});
@@ -313,8 +325,33 @@ async function genMelio(){
   }catch(e){ setStatus('testStatus',String(e.message||e),'err'); }
 }
 
+function memBlock(d){
+  const m=d.memory_new; if(!m) return '';
+  const lg=m.learning||{};
+  return `<div class="tl-box" style="font-family:var(--mono);font-size:12px">
+    <b style="color:var(--muted)">memory_new:</b> level=${esc(m.level)} · pos=${esc(lg.difficulty_pos)}<br>
+    concepts_used: ${esc((lg.concepts_used||[]).join(', ')||'—')}<br>
+    quiz_log: ${esc((lg.quiz_log||[]).length)} записей</div>`;
+}
 function renderMelio(d){
   const out=document.getElementById('testOut');
+  const mode=(d&&d.mode)||document.getElementById('tMode').value;
+  if(mode==='review'&&d.review){
+    const r=d.review;
+    out.innerHTML=`<div class="tl"><div class="tl-num">Мелио · review</div>
+      <div class="tl-box"><b>Сильно:</b> ${esc(r.strength||'')}</div>
+      <div class="tl-box"><b>Слабое:</b> ${esc(r.weak||'')}</div>
+      <div class="tl-box tl-take"><b>Одно изменение:</b> ${esc(r.one_change||'')}</div>${memBlock(d)}</div>`;
+    return;
+  }
+  if(mode==='reassess'&&d.reassess){
+    const r=d.reassess, dim=r.dimensions||{};
+    const dims=Object.entries(dim).map(([k,v])=>`${esc(k)}: ${esc(v)}`).join(' · ');
+    out.innerHTML=`<div class="tl"><div class="tl-num">Мелио · L${esc(r.level)} ${r.moved_up?'▲':''}</div>
+      <div class="tl-box"><b>Измерения:</b> ${dims}</div>
+      <div class="tl-box"><b>Доказательства:</b> ${esc(r.evidence||'')}</div>${memBlock(d)}</div>`;
+    return;
+  }
   const l=d&&d.lesson;
   if(!l){ out.innerHTML='<div class="tl">Пустой ответ агента.</div>'; return; }
   const steps=(l.steps||[]).map((s,i)=>`<p class="tl-step"><span class="tl-sn">${i+1}</span>${esc(s)}</p>`).join('');
@@ -332,6 +369,7 @@ function renderMelio(d){
       ${q.situation?`<div class="tl-q"><div class="tl-qq">${esc(q.situation)}</div>${opts}<div class="tl-ex">${esc(q.explain||'')}</div></div>`:''}
       ${l.task?`<div class="tl-box tl-take"><b>Задание:</b> ${esc(l.task)}</div>`:''}
       <div class="tl-box" style="font-family:var(--mono);font-size:12px"><b style="color:var(--muted)">meta:</b> weakspot=${esc((d.meta&&d.meta.weakspot)||'')}<br><b style="color:var(--muted)">memory_delta:</b><br>${dl}</div>
+      ${memBlock(d)}
     </div>`;
 }
 
