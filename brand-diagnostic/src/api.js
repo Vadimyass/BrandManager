@@ -26,3 +26,5 @@ export const getLesson = (index, calibration, niche, diagnosis) => post("lesson"
 export const getCourse = (calibration, niche, diagnosis, profile) => post("course", { calibration, niche, diagnosis, profile });
 export const gradeHomework = (axis, index, task, submission, calibration, niche) =>
   post("grade", { axis, index, task, submission, calibration, niche });
+export const startCheckout = (payload) => post("checkout", payload);
+export const checkEntitlement = (payload) => post("entitlement", payload);

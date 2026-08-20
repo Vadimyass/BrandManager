@@ -6,7 +6,7 @@ import { setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
-import { diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback } from "./api.js";
+import { checkEntitlement, diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
 import { getLang, LANGS, setLang, t } from "./i18n.js";
 import { CSS } from "./styles.js";
 
@@ -337,6 +337,8 @@ export default function App() {
   const [email, setEmail] = useState(s.email ?? "");
   const [joined, setJoined] = useState(s.joined ?? false);
   const [intent, setIntent] = useState(s.intent ?? null);
+  const [paying, setPaying] = useState(false);
+  const [paidCourse, setPaidCourse] = useState(false);
   const [lessons, setLessons] = useState(s.lessons ?? {});
   const [courseTotal, setCourseTotal] = useState(s.courseTotal ?? 10);
   const [lessonStage, setLessonStage] = useState(
@@ -524,6 +526,37 @@ export default function App() {
       setPhase("result");
     });
   }
+
+  // Оплата курса через провайдера (Lemon Squeezy). Если платежи ещё не настроены —
+  // мягко откатываемся к брони по почте, ничего не ломая.
+  async function pay() {
+    setPaying(true);
+    track("buy_clicked");
+    try {
+      const res = await startCheckout({
+        product: "course",
+        email: user?.email || (email.includes("@") ? email : undefined),
+        userId: user?.id || undefined,
+        redirectUrl: window.location.origin + window.location.pathname + "#/cabinet",
+      });
+      if (res?.url) { window.location.href = res.url; return; }
+      throw new Error("no checkout url");
+    } catch {
+      track("checkout_fallback");
+      setIntent("purchase"); // покажем форму брони по почте
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  // Проверка доступа (мягкая — контент не секретный). Ставит paidCourse, если покупка есть.
+  useEffect(() => {
+    const uid = user?.id, em = user?.email;
+    if (!uid && !em) return;
+    checkEntitlement({ product: "course", userId: uid, email: em })
+      .then((r) => { if (r?.active) setPaidCourse(true); })
+      .catch(() => {});
+  }, [user]);
 
   // Точку входа в курс раздваиваем: если уроков ещё нет — сперва знакомство с Мелио,
   // потом генерация. Если уроки уже собраны — сразу открываем.
@@ -1165,7 +1198,13 @@ export default function App() {
             <h1 style={{ fontSize: "clamp(24px,4.5vw,32px)" }}>Как забрать курс</h1>
             <p className="lede">Два способа — выбирай любой.</p>
 
-            {joined ? (
+            {paidCourse ? (
+              <div className="planbox" style={{ marginTop: 24 }}>
+                <div className="eyebrow" style={{ color: "var(--amber)" }}>Оплачено</div>
+                <div style={{ fontFamily: "var(--disp)", fontSize: 20, margin: "6px 0 16px" }}>Курс твой. Спасибо — открываем.</div>
+                <button className="btn amber" onClick={beginCourse}>Открыть курс</button>
+              </div>
+            ) : joined ? (
               <div className="planbox" style={{ marginTop: 24 }}>
                 <div className="eyebrow" style={{ color: "var(--violet)" }}>Готово</div>
                 <div style={{ fontFamily: "var(--disp)", fontSize: 20, marginTop: 6 }}>
@@ -1180,7 +1219,7 @@ export default function App() {
                   <div className="ptag">Купить сейчас</div>
                   <div className="pprice">{COURSE_PRICE}</div>
                   <div className="pnote">Доступ навсегда, все пять уроков и личный план.</div>
-                  <button className="btn amber" style={{ width: "100%" }} onClick={() => { setIntent("purchase"); track("buy_clicked"); }}>Оплатить</button>
+                  <button className="btn amber" style={{ width: "100%" }} disabled={paying} onClick={pay}>{paying ? "Открываю оплату…" : "Оплатить"}</button>
                 </div>
                 <div className={"path" + (intent === "plan" ? " on" : "")}>
                   <div className="ptag">Пока подождать</div>

@@ -16,6 +16,7 @@ import {
 import { courseLength, planFor, runCourse, runLesson } from "./course.ts";
 import { runMelio } from "./melio.ts";
 import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
+import { paymentAdapter } from "./payments.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
 import { type CourseConfig, DEFAULT_CONFIG, normalizeConfig } from "./config.ts";
 import type { LlmUsage } from "./llm.ts";
@@ -44,8 +45,15 @@ Deno.serve(async (req) => {
 
   const route = new URL(req.url).pathname.split("/").filter(Boolean).pop();
   try {
+    // Вебхуку провайдера нужно СЫРОЕ тело для проверки подписи — читаем до json.
+    if (route === "payment-webhook") return json(await paymentWebhook(req));
+
     const body = await req.json();
     switch (route) {
+      case "checkout":
+        return json(await checkout(body));
+      case "entitlement":
+        return json(await entitlement(body));
       case "deck":
         return json(await deck(body));
       case "diagnose":
@@ -231,6 +239,56 @@ async function config(req: Request, body: { action?: string; adminKey?: string; 
   }
   // По умолчанию — вернуть текущий конфиг (или дефолт).
   return { status: "ok", config: await loadConfig(), defaults: DEFAULT_CONFIG };
+}
+
+// Оплата: создаём ссылку checkout у текущего провайдера. Привязку (user_id/email) кладём
+// в custom-данные — вернётся в вебхуке.
+async function checkout(body: { product?: string; email?: string; userId?: string; redirectUrl?: string }) {
+  const product = body.product || "course";
+  const url = await paymentAdapter().createCheckout({
+    product,
+    email: body.email,
+    userId: body.userId,
+    redirectUrl: body.redirectUrl || "https://melyo.tech/#/cabinet",
+  });
+  return { status: "ok", url };
+}
+
+// Вебхук провайдера: проверяем подпись, нормализуем, пишем доступ. Идемпотентно по external_id.
+async function paymentWebhook(req: Request) {
+  const raw = await req.text();
+  const adapter = paymentAdapter();
+  const valid = await adapter.verifyWebhook(raw, req.headers);
+  if (!valid) return { status: "bad signature" };
+  const p = adapter.parseWebhook(raw);
+  if (!p || !p.ok || !p.externalId) return { status: "ignored" };
+
+  const { error } = await db.from("entitlements").upsert({
+    email: p.email ?? null,
+    user_id: p.userId || null,
+    product: p.product,
+    provider: adapter.name,
+    status: p.status,
+    external_id: p.externalId,
+    amount: p.amount ?? null,
+    currency: p.currency ?? null,
+  }, { onConflict: "provider,external_id" });
+  if (error) console.error("entitlement upsert:", error.message);
+  return { status: "ok" };
+}
+
+// Проверка доступа: активная покупка по user_id ИЛИ email. Контент не секретный — гейт мягкий.
+async function entitlement(body: { product?: string; userId?: string; email?: string }) {
+  const product = body.product || "course";
+  const email = (body.email ?? "").trim().toLowerCase();
+  const userId = body.userId ?? "";
+  if (!email && !userId) return { active: false };
+
+  let q = db.from("entitlements").select("id").eq("product", product).eq("status", "active");
+  q = userId && email ? q.or(`user_id.eq.${userId},email.eq.${email}`) : userId ? q.eq("user_id", userId) : q.eq("email", email);
+  const { data, error } = await q.limit(1);
+  if (error) { console.error("entitlement check:", error.message); return { active: false }; }
+  return { active: (data?.length ?? 0) > 0 };
 }
 
 async function track(body: { sessionId: string; name: string; props?: unknown; niche?: string; referrer?: string }) {
