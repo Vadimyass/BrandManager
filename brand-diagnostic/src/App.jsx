@@ -789,8 +789,8 @@ export default function App() {
             <div className="wl-grid">
               <div className="wl-left">
                 <div className="wl-hero">
-                  <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Маскот Melyo" className="wl-mascot" />
                   <div className="wl-bubble">{t("melio_hi")}</div>
+                  <img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="Маскот Melyo" className="wl-mascot" />
                 </div>
                 <h1 className="wl-h1">{t("wl_h1")}</h1>
                 <p className="wl-sub">{t("wl_sub")}</p>

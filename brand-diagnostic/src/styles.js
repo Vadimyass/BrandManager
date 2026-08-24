@@ -237,9 +237,11 @@ export const CSS = `
 .bd .wl-right{padding-left:80px;border-left:1px solid var(--line);display:flex;flex-direction:column;max-width:560px}
 .bd .wl-stat b{white-space:nowrap}
 .bd .wl-stat span{white-space:nowrap}
-.bd .wl-hero{position:relative;margin-bottom:26px}
-.bd .wl-mascot{width:210px;max-width:60%;height:auto;filter:drop-shadow(0 18px 34px rgba(1,71,83,.16))}
-.bd .wl-bubble{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 18px;font-size:15px;line-height:1.5;color:var(--ink);max-width:280px;margin-top:-30px;margin-left:60px}
+/* Пузырь-цитата сверху-слева с хвостиком к Мелио; сам Мелио — справа снизу под пузырём */
+.bd .wl-hero{position:relative;display:flex;flex-direction:column;align-items:flex-start;margin-bottom:26px}
+.bd .wl-bubble{position:relative;align-self:flex-start;background:var(--surface);border:1.5px solid var(--line);border-radius:22px;padding:16px 20px;font-weight:600;font-size:15.5px;line-height:1.5;color:var(--ink);max-width:min(360px,86%);box-shadow:0 10px 26px rgba(1,71,83,.06);z-index:2}
+.bd .wl-bubble::after{content:"";position:absolute;right:44px;bottom:-9px;width:16px;height:16px;background:var(--surface);border-right:1.5px solid var(--line);border-bottom:1.5px solid var(--line);transform:rotate(45deg)}
+.bd .wl-mascot{align-self:flex-end;width:210px;max-width:64%;height:auto;margin-top:-6px;margin-right:6px;filter:drop-shadow(0 18px 34px rgba(1,71,83,.16))}
 .bd .wl-h1{font-family:var(--disp);font-weight:700;font-size:clamp(34px,4.4vw,52px);line-height:1.05;letter-spacing:-.02em;color:var(--ink);margin:0 0 16px}
 .bd .wl-sub{font-size:16.5px;line-height:1.6;color:var(--muted);margin:0 0 30px;max-width:46ch}
 .bd .wl-stats{display:flex;gap:40px}
@@ -263,8 +265,8 @@ export const CSS = `
   .bd .wl-left{padding-right:0;margin-bottom:34px}
   .bd .wl-right{padding-left:0;border-left:none;border-top:1px solid var(--line);padding-top:30px}
   .bd .wl-h1{font-size:clamp(28px,8vw,40px)}
-  .bd .wl-mascot{width:150px}
-  .bd .wl-bubble{margin-left:20px}
+  .bd .wl-mascot{width:180px;max-width:60%;margin-right:2px}
+  .bd .wl-bubble{max-width:88%}
   .bd .wl-stats{gap:28px}
 }
 .bd .welcome h1{margin-top:18px}
