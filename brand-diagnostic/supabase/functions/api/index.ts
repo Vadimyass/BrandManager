@@ -39,6 +39,46 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+// Дорогие роуты (жгут кредиты LLM) — под рейт-лимитом.
+const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson"]);
+// Служебные инструменты rules-lab — только под admin-ключом.
+const ADMIN_ONLY = new Set(["testlesson", "melio"]);
+const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_HOUR")) || 40;
+
+function clientId(req: Request, body: { sessionId?: string }): string {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    req.headers.get("cf-connecting-ip") || "";
+  return ip || (body?.sessionId ? `s:${String(body.sessionId).slice(0, 64)}` : "anon");
+}
+
+// Скользящее окно 1 час на клиента (IP/сессия), общее по дорогим роутам.
+async function underRateLimit(req: Request, body: { sessionId?: string }): Promise<boolean> {
+  try {
+    const key = `llm:${clientId(req, body)}`;
+    const since = new Date(Date.now() - 3600_000).toISOString();
+    await db.from("rate_limits").delete().eq("key", key).lt("created_at", since);
+    const { count } = await db.from("rate_limits").select("id", { count: "exact", head: true })
+      .eq("key", key).gte("created_at", since);
+    if ((count ?? 0) >= RATE_LIMIT) return false;
+    await db.from("rate_limits").insert({ key });
+    return true;
+  } catch (e) {
+    console.error("rate limit:", e);
+    return true; // не блокируем легитимных из-за сбоя счётчика
+  }
+}
+
+function adminOk(body: { adminKey?: string }): boolean {
+  const key = Deno.env.get("CONFIG_ADMIN_KEY");
+  return !!key && body?.adminKey === key;
+}
+
+// Обрезка пользовательского ввода — чтобы раздутым payload не гнать лишние токены.
+function capStr(v: unknown, n: number): string | undefined {
+  if (v == null) return undefined;
+  return String(v).slice(0, n);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -49,6 +89,17 @@ Deno.serve(async (req) => {
     if (route === "payment-webhook") return json(await paymentWebhook(req));
 
     const body = await req.json();
+
+    // Рейт-лимит на дорогих (LLM) роутах — защита от «постман сжёг кредиты».
+    if (EXPENSIVE.has(route ?? "")) {
+      const ok = await underRateLimit(req, body);
+      if (!ok) return json({ error: "Слишком много запросов. Подожди немного и попробуй снова." }, 429);
+    }
+    // Служебные роуты (инструменты rules-lab) — только с admin-ключом.
+    if (ADMIN_ONLY.has(route ?? "") && !adminOk(body)) {
+      return json({ error: "forbidden" }, 403);
+    }
+
     switch (route) {
       case "checkout":
         return json(await checkout(body));
@@ -84,8 +135,15 @@ Deno.serve(async (req) => {
 });
 
 async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string; lang?: string }) {
-  const { seedAnswers, name, niche, lang } = body;
-  if (!seedAnswers?.length || seedAnswers.length < 2) throw new Error("seed answers incomplete");
+  const seedAnswers = (Array.isArray(body.seedAnswers) ? body.seedAnswers : []).slice(0, 14).map((s) => ({
+    id: capStr(s?.id, 40) ?? "",
+    q: capStr(s?.q, 200) ?? "",
+    answer: capStr(s?.answer, 300) ?? "",
+  }));
+  const name = capStr(body.name, 120);
+  const niche = capStr(body.niche, 120);
+  const lang = body.lang;
+  if (!seedAnswers.length || seedAnswers.length < 2) throw new Error("seed answers incomplete");
 
   const usage: LlmUsage[] = [];
   const calibration = await runCalibrator(seedAnswers, name, niche, usage, lang);
@@ -110,6 +168,23 @@ interface DiagnosePayload {
 
 async function diagnose(body: DiagnosePayload) {
   if (!body.calibration || (body.decisions?.length ?? 0) < 5) throw new Error("decisions incomplete");
+
+  // Обрезаем ввод: не даём раздутым payload гнать лишние токены.
+  body.name = capStr(body.name, 120);
+  body.niche = capStr(body.niche, 120);
+  body.decisions = (body.decisions ?? []).slice(0, 20).map((d) => ({
+    situation: capStr(d?.situation, 200) ?? "",
+    chosen: capStr(d?.chosen, 160) ?? "",
+    chosenAxis: capStr(d?.chosenAxis, 24) ?? "",
+    rejected: capStr(d?.rejected, 160) ?? "",
+    rejectedAxis: capStr(d?.rejectedAxis, 24) ?? "",
+  })) as Decision[];
+  if (body.links) {
+    const lim: Record<string, string> = {};
+    for (const [k, v] of Object.entries(body.links).slice(0, 6)) lim[capStr(k, 24)!] = capStr(v, 300) ?? "";
+    body.links = lim;
+  }
+  body.deckUsage = Array.isArray(body.deckUsage) ? body.deckUsage.slice(0, 20) : [];
 
   const started = Date.now();
   const usage: LlmUsage[] = [...(body.deckUsage ?? [])];
@@ -154,10 +229,12 @@ async function loadConfig(): Promise<CourseConfig> {
 
 async function course(body: { calibration: Calibration; niche?: string; diagnosis: Diagnosis; lang?: string; profile?: string }) {
   if (!body.diagnosis?.weakness || !body.calibration) throw new Error("diagnosis required");
+  const niche = capStr(body.niche, 120);
+  const profile = capStr(body.profile, 600);
   const usage: LlmUsage[] = [];
   const axis = body.diagnosis.weakness.axis;
   const cfg = await loadConfig();
-  const lessons = await runCourse(axis, body.calibration, body.niche, body.diagnosis, usage, body.lang, body.profile, cfg);
+  const lessons = await runCourse(axis, body.calibration, niche, body.diagnosis, usage, body.lang, profile, cfg);
   return { status: "ok", lessons, total: courseLength(axis) };
 }
 
@@ -263,6 +340,13 @@ async function paymentWebhook(req: Request) {
   const p = adapter.parseWebhook(raw);
   if (!p || !p.ok || !p.externalId) return { status: "ignored" };
 
+  // Defense-in-depth: если задан минимум суммы — не выдаём доступ за оплату ниже цены.
+  const minAmount = Number(Deno.env.get("ENTITLEMENT_MIN_AMOUNT"));
+  if (minAmount > 0 && typeof p.amount === "number" && p.amount < minAmount) {
+    console.warn(`webhook amount ${p.amount} < min ${minAmount} — доступ не выдан`);
+    return { status: "amount too low" };
+  }
+
   const { error } = await db.from("entitlements").upsert({
     email: p.email ?? null,
     user_id: p.userId || null,
@@ -277,11 +361,20 @@ async function paymentWebhook(req: Request) {
   return { status: "ok" };
 }
 
-// Проверка доступа: активная покупка по user_id ИЛИ email. Контент не секретный — гейт мягкий.
-async function entitlement(body: { product?: string; userId?: string; email?: string }) {
-  const product = body.product || "course";
-  const email = (body.email ?? "").trim().toLowerCase();
-  const userId = body.userId ?? "";
+// Проверка доступа. Для залогиненных ЛИЧНОСТЬ берём из проверенного JWT (accessToken),
+// а не из тела запроса — иначе можно было бы прислать чужой userId. email — мягкий фолбэк
+// для гостевых покупок (по природе слабее; жёсткий замок должен опираться на JWT).
+async function entitlement(body: { product?: string; userId?: string; email?: string; accessToken?: string }) {
+  const product = capStr(body.product, 40) || "course";
+  let userId = "";
+  let email = "";
+
+  if (body.accessToken) {
+    const { data } = await db.auth.getUser(body.accessToken);
+    if (data?.user) { userId = data.user.id; email = (data.user.email ?? "").toLowerCase(); }
+  }
+  // Без токена принимаем email как незаверенный фолбэк (гость). userId из тела НЕ доверяем.
+  if (!userId && !email) email = (capStr(body.email, 160) ?? "").trim().toLowerCase();
   if (!email && !userId) return { active: false };
 
   let q = db.from("entitlements").select("id").eq("product", product).eq("status", "active");

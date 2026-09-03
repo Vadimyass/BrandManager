@@ -314,7 +314,7 @@ async function genMelio(){
     document.getElementById('testOut').innerHTML='';
     const body={ mode:document.getElementById('tMode').value, niche:val('tNiche'), axis:document.getElementById('tAxis').value,
       index:(+val('tIndex')||1)-1, level:+val('tLevel')||1, lang:document.getElementById('tLang').value,
-      artifact:val('tArtifact') };
+      artifact:val('tArtifact'), adminKey:c.admin };
     const res=await fetch(c.url+"/functions/v1/api/melio",{method:'POST',
       headers:{'Content-Type':'application/json','apikey':c.anon,'Authorization':'Bearer '+c.anon},
       body:JSON.stringify(body)});
@@ -385,6 +385,7 @@ async function genTest(){
       axis:document.getElementById('tAxis').value,
       index:(+val('tIndex')||1)-1,
       lang:document.getElementById('tLang').value,
+      adminKey:c.admin,
     };
     const res=await fetch(c.url+"/functions/v1/api/testlesson",{
       method:'POST',

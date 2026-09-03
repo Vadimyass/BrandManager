@@ -549,13 +549,15 @@ export default function App() {
     }
   }
 
-  // Проверка доступа (мягкая — контент не секретный). Ставит paidCourse, если покупка есть.
+  // Проверка доступа. Личность сервер берёт из проверенного JWT (accessToken), не из тела.
   useEffect(() => {
-    const uid = user?.id, em = user?.email;
-    if (!uid && !em) return;
-    checkEntitlement({ product: "course", userId: uid, email: em })
-      .then((r) => { if (r?.active) setPaidCourse(true); })
-      .catch(() => {});
+    const em = user?.email;
+    if (!user) return;
+    supabase.auth.getSession().then(({ data }) => {
+      checkEntitlement({ product: "course", accessToken: data?.session?.access_token, email: em })
+        .then((r) => { if (r?.active) setPaidCourse(true); })
+        .catch(() => {});
+    });
   }, [user]);
 
   // Точку входа в курс раздваиваем: если уроков ещё нет — сперва знакомство с Мелио,
