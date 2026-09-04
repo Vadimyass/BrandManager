@@ -30,6 +30,28 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
+function CookieBanner() {
+  const KEY = "melyo_cookie_consent";
+  const [choice, setChoice] = useState(() => { try { return localStorage.getItem(KEY); } catch { return "necessary"; } });
+  if (choice) return null;
+  const decide = (v) => {
+    try { localStorage.setItem(KEY, v); } catch { /* ignore */ }
+    setChoice(v);
+    try { window.dispatchEvent(new CustomEvent("melyo-consent", { detail: v })); } catch { /* ignore */ }
+  };
+  return (
+    <div className="cookiebar" role="dialog" aria-label="Cookie">
+      <div className="cookietxt">
+        {t("cookie_text")} <a href={`${import.meta.env.BASE_URL}cookies.html`} target="_blank" rel="noopener">{t("cookie_more")}</a>
+      </div>
+      <div className="cookiebtns">
+        <button className="cookiebtn ghost" onClick={() => decide("necessary")}>{t("cookie_necessary")}</button>
+        <button className="cookiebtn pri" onClick={() => decide("all")}>{t("cookie_all")}</button>
+      </div>
+    </div>
+  );
+}
+
 function LangSwitch() {
   const cur = getLang();
   return (
@@ -767,6 +789,7 @@ export default function App() {
   return (
     <div className="bd">
       <style>{CSS}</style>
+      <CookieBanner />
       <div className="blob a" /><div className="blob b" />
       <div className={"wrap" + (["welcome", "result", "niche", "intro", "tradeoffs", "lesson", "offer"].includes(phase) ? " wrap-wide" : "")}>
 

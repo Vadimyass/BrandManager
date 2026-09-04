@@ -21,6 +21,13 @@ function sessionId() {
 let niche = null;
 export function setTrackNiche(n) { niche = n; }
 
+// Согласие на аналитику/маркетинг (сторонние сервисы вроде GA). Первичная анонимная
+// продуктовая аналитика (track ниже) работает как легитимный интерес и не требует согласия.
+export const COOKIE_CONSENT_KEY = "melyo_cookie_consent";
+export function analyticsConsent() {
+  try { return localStorage.getItem(COOKIE_CONSENT_KEY) === "all"; } catch { return false; }
+}
+
 // Выстрелил и забыл: аналитика никогда не блокирует и не роняет поток.
 export function track(name, props) {
   try {

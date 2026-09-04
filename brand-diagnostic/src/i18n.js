@@ -123,6 +123,10 @@ const T = {
   foot_oferta: { uk: "Оферта", ru: "Оферта", en: "Terms" },
   foot_privacy: { uk: "Політика конфіденційності", ru: "Политика конфиденциальности", en: "Privacy" },
   foot_cookies: { uk: "Cookie", ru: "Cookie", en: "Cookies" },
+  cookie_text: { uk: "Ми використовуємо cookie: необхідні — щоб сайт працював, аналітичні — щоб покращувати Melyo (лише з твоєї згоди).", ru: "Мы используем cookie: необходимые — чтобы сайт работал, аналитические — чтобы улучшать Melyo (только с твоего согласия).", en: "We use cookies: necessary ones to run the site, analytics ones to improve Melyo (only with your consent)." },
+  cookie_all: { uk: "Прийняти всі", ru: "Принять все", en: "Accept all" },
+  cookie_necessary: { uk: "Тільки необхідні", ru: "Только необходимые", en: "Only necessary" },
+  cookie_more: { uk: "Детальніше", ru: "Подробнее", en: "Learn more" },
 };
 
 export function t(key) {

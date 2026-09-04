@@ -59,6 +59,16 @@ export const CSS = `
 .bd .artul{margin:0 0 15px;padding-left:20px}
 .bd .artul li{font-size:16.5px;line-height:1.6;margin-bottom:8px}
 .bd .artnext{margin-top:30px}
+.bd .cookiebar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;max-width:720px;margin:0 auto;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 16px 40px rgba(1,71,83,.16);padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;animation:fadeUp .4s both}
+.bd .cookietxt{flex:1;min-width:220px;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.bd .cookietxt a{color:var(--teal);font-weight:600;white-space:nowrap}
+.bd .cookiebtns{display:flex;gap:8px;flex-wrap:wrap}
+.bd .cookiebtn{font-family:var(--body);font-weight:700;font-size:13px;padding:9px 16px;border-radius:999px;cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--teal);transition:all .15s}
+.bd .cookiebtn.pri{background:var(--amber);border-color:var(--amber);color:var(--teal)}
+.bd .cookiebtn.pri:hover{box-shadow:0 6px 16px rgba(1,210,127,.25)}
+.bd .cookiebtn.ghost{background:transparent}
+.bd .cookiebtn.ghost:hover{border-color:var(--teal)}
+@media(max-width:520px){.bd .cookiebar{flex-direction:column;align-items:stretch}.bd .cookiebtns{justify-content:stretch}.bd .cookiebtn{flex:1}}
 .bd .legalfoot{text-align:center;margin:34px 0 6px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
 .bd .legalfoot a{font-size:12.5px;color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
 .bd .legalfoot a:hover{color:var(--teal);border-bottom-color:var(--teal)}
