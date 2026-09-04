@@ -59,7 +59,10 @@ export const CSS = `
 .bd .artul{margin:0 0 15px;padding-left:20px}
 .bd .artul li{font-size:16.5px;line-height:1.6;margin-bottom:8px}
 .bd .artnext{margin-top:30px}
-.bd .verstamp{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted);opacity:.55;margin:38px 0 4px}
+.bd .legalfoot{text-align:center;margin:34px 0 6px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.bd .legalfoot a{font-size:12.5px;color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+.bd .legalfoot a:hover{color:var(--teal);border-bottom-color:var(--teal)}
+.bd .verstamp{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted);opacity:.55;margin:8px 0 4px}
 .bd .topbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
 .bd .tbtn{font-family:var(--body);font-size:13px;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;transition:all .15s}
 .bd .tbtn:hover{border-color:var(--ink)}

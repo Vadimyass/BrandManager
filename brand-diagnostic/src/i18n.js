@@ -120,6 +120,9 @@ const T = {
   theme_youpicked: { uk: "Твоя відповідь", ru: "Твой ответ", en: "Your answer" },
   theme_learned: { uk: "Що засвоїли", ru: "Что усвоили", en: "What we learned" },
   theme_score: { uk: "Правильних відповідей", ru: "Верных ответов", en: "Correct answers" },
+  foot_oferta: { uk: "Оферта", ru: "Оферта", en: "Terms" },
+  foot_privacy: { uk: "Політика конфіденційності", ru: "Политика конфиденциальности", en: "Privacy" },
+  foot_cookies: { uk: "Cookie", ru: "Cookie", en: "Cookies" },
 };
 
 export function t(key) {

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="index, follow" />
+<title>Політика cookie · Melyo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+  :root{--bg:#F4F3FA;--surface:#FFFFFF;--ink:#1A1B33;--muted:#6A7A82;--line:#E7E4F3;--green:#01D27F;--teal:#014753}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;line-height:1.6}
+  .top{max-width:860px;margin:0 auto;padding:22px 20px 0;display:flex;align-items:center;gap:12px}
+  .top a.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--teal);font-weight:900;font-size:22px;text-transform:uppercase;letter-spacing:-.01em}
+  .top img{width:34px;height:34px}
+  .top .back{margin-left:auto;font-size:14px;color:var(--teal);text-decoration:none;font-weight:600}
+  .wrap{max-width:860px;margin:18px auto 60px;padding:clamp(20px,4vw,40px);background:var(--surface);border:1.5px solid var(--line);border-radius:20px}
+  h1{font-weight:900;font-size:clamp(24px,4vw,34px);text-transform:uppercase;letter-spacing:-.01em;margin:0 0 6px}
+  h2{font-weight:800;font-size:clamp(18px,2.6vw,22px);margin:28px 0 8px}
+  h3{font-weight:700;font-size:16px;margin:18px 0 6px}
+  p,li{font-size:15.5px;color:var(--ink)}
+  a{color:var(--green)}
+  ul{padding-left:20px}
+  li{margin-bottom:6px}
+  hr{border:none;border-top:1px solid var(--line);margin:26px 0}
+  code{background:#EFECFB;padding:1px 6px;border-radius:6px;font-size:14px}
+  blockquote{margin:16px 0;padding:12px 16px;background:#F4F3FA;border-left:3px solid var(--green);border-radius:0 12px 12px 0;color:var(--muted)}
+  .foot{max-width:860px;margin:0 auto 40px;padding:0 20px;font-size:13px;color:var(--muted)}
+  .foot a{color:var(--teal);margin-right:14px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="brand" href="/"><img src="/mascot-cool.png" alt="" />melyo</a>
+    <a class="back" href="/">← На сайт</a>
+  </div>
+  <main class="wrap">
+<h1>Політика щодо файлів cookie Melyo</h1>
+<p><strong>Редакція від [ДАТА].</strong></p>
+<h2>Що таке cookie та локальне сховище</h2>
+<p>Cookie — невеликі файли, які сайт зберігає у вашому браузері. Ми також використовуємо <strong>локальне сховище браузера</strong> (localStorage) для схожих цілей. Далі — «файли cookie».</p>
+<h2>Які категорії ми використовуємо</h2>
+<ul>
+<li><strong>Необхідні (завжди активні).</strong> Потрібні для роботи Сервісу: вхід і сесія, збереження вибору мови та гостьового прогресу проходження. Без них Сервіс не працюватиме. Правова підстава — виконання договору / законний інтерес.</li>
+<li><strong>Аналітичні (за згодою).</strong> Допомагають зрозуміти, як користуються Сервісом (кроки воронки під знеособленим ідентифікатором сесії), щоб покращувати продукт.</li>
+<li><strong>Маркетингові (за згодою).</strong> Використовуються лише за наявності — для релевантних пропозицій. Якщо не використовуються, цей пункт незастосовний.</li>
+</ul>
+<h2>Ваш вибір</h2>
+<p>Під час першого візиту ми показуємо банер згоди. Ви можете <strong>прийняти</strong> або <strong>відхилити</strong> необов&#39;язкові (аналітичні/маркетингові) cookie. Необхідні файли встановлюються завжди. Змінити рішення можна, очистивши дані сайту в налаштуваннях браузера.</p>
+<h2>Партнери</h2>
+<p>Деякі cookie можуть встановлювати наші постачальники (автентифікація Google, платіжний партнер, хостинг). Докладніше про обробку даних — у <a href="./privacy.md">Політиці конфіденційності</a>.</p>
+<h2>Контакти</h2>
+<p>Питання: <strong>[EMAIL]</strong>, ФОП [ПІБ ФОП], <a href="https://melyo.tech">https://melyo.tech</a>.</p>
+<hr>
+<h2>Текст банера згоди (для сайту)</h2>
+<blockquote>
+<p><strong>Ми використовуємо файли cookie.</strong> Необхідні — для роботи сайту (вхід, мова, прогрес). Аналітичні — щоб покращувати Melyo, лише з вашої згоди. Детальніше — у <a href="./cookies.md">Політиці cookie</a> та <a href="./privacy.md">Політиці конфіденційності</a>.</p>
+<p>[ Прийняти всі ]  [ Тільки необхідні ]</p>
+</blockquote>
+<p><strong>Логіка (для реалізації):</strong></p>
+<ul>
+<li>До вибору — аналітичні події (<code>track</code>) не надсилаються.</li>
+<li>«Тільки необхідні» → зберігаємо прапорець згоди = necessary; аналітику не шлемо.</li>
+<li>«Прийняти всі» → прапорець = all; вмикаємо аналітику.</li>
+<li>Рішення зберігаємо в localStorage (<code>melyo_cookie_consent</code>), банер більше не показуємо.</li>
+</ul>
+
+  </main>
+  <div class="foot">
+    <a href="/oferta.html">Оферта</a><a href="/privacy.html">Політика конфіденційності</a><a href="/cookies.html">Cookie</a>
+  </div>
+</body>
+</html>

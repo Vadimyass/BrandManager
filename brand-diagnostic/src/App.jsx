@@ -1515,6 +1515,11 @@ export default function App() {
           </div>
         )}
 
+        <div className="legalfoot">
+          <a href={`${import.meta.env.BASE_URL}oferta.html`} target="_blank" rel="noopener">{t("foot_oferta")}</a>
+          <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener">{t("foot_privacy")}</a>
+          <a href={`${import.meta.env.BASE_URL}cookies.html`} target="_blank" rel="noopener">{t("foot_cookies")}</a>
+        </div>
         <div className="verstamp">v{APP_VERSION}</div>
       </div>
     </div>
