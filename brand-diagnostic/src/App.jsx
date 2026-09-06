@@ -13,9 +13,12 @@ import { CSS } from "./styles.js";
 const FLY_MS = 420;
 const SWIPE_THRESHOLD = 90;
 
-// A/B фаза 1: "deck" — дилеммы «или-или», "gentle" — мягкий ситуативный опрос. 50/50, стабильно на сессию.
-const GENTLE_PCT = 50;
+// Фаза 1: "gentle" — мягкий ситуативный опрос, "deck" — дилеммы «или-или».
+// GENTLE_PCT=100 — раскатываем gentle на всех. Для A/B вернуть в диапазон 1–99 (тогда 50/50 и т.п.).
+const GENTLE_PCT = 100;
 function assignedArm() {
+  if (GENTLE_PCT >= 100) return "gentle"; // полная раскатка, перекрывает старое сохранение
+  if (GENTLE_PCT <= 0) return "deck";
   try {
     let a = localStorage.getItem("melyo_arm");
     if (a !== "deck" && a !== "gentle") {
@@ -23,7 +26,7 @@ function assignedArm() {
       localStorage.setItem("melyo_arm", a);
     }
     return a;
-  } catch { return "deck"; }
+  } catch { return "gentle"; }
 }
 
 const QUOTES = [
