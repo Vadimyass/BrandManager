@@ -10,8 +10,10 @@ import {
   runDiagnost,
   runDiagValidator,
   runGenerator,
+  runGeneratorSituational,
   runMethodist,
   type SeedAnswer,
+  situationalLog,
 } from "./agents.ts";
 import { courseLength, planFor, runCourse, runLesson } from "./course.ts";
 import { runMelio } from "./melio.ts";
@@ -134,7 +136,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string; lang?: string }) {
+async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: string; lang?: string; arm?: string }) {
   const seedAnswers = (Array.isArray(body.seedAnswers) ? body.seedAnswers : []).slice(0, 14).map((s) => ({
     id: capStr(s?.id, 40) ?? "",
     q: capStr(s?.q, 200) ?? "",
@@ -147,11 +149,20 @@ async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: st
 
   const usage: LlmUsage[] = [];
   const calibration = await runCalibrator(seedAnswers, name, niche, usage, lang);
+
+  // A/B: вариант B — мягкий ситуативный опрос вместо дилемм.
+  if (body.arm === "gentle") {
+    let questions = await runGeneratorSituational(calibration, seedAnswers, name, niche, usage, lang);
+    if (questions.length < 5) questions = await runGeneratorSituational(calibration, seedAnswers, name, niche, usage, lang);
+    if (questions.length < 5) throw new Error("situational generation failed");
+    return { status: "ok", calibration, questions, arm: "gentle", usage };
+  }
+
   let cards = await runGenerator(calibration, seedAnswers, name, niche, usage, lang);
   if (cards.length < 5) cards = await runGenerator(calibration, seedAnswers, name, niche, usage, lang);
   if (cards.length < 5) throw new Error("deck generation failed");
 
-  return { status: "ok", calibration, cards, usage };
+  return { status: "ok", calibration, cards, arm: "deck", usage };
 }
 
 interface DiagnosePayload {
@@ -159,19 +170,32 @@ interface DiagnosePayload {
   niche?: string;
   version?: string;
   lang?: string;
+  arm?: string;
   seedAnswers: SeedAnswer[];
   calibration: Calibration;
   decisions: Decision[];
+  answers?: { situation: string; chosen: string; chosenAxis: string }[];
   links?: Record<string, string>;
   deckUsage?: LlmUsage[];
 }
 
 async function diagnose(body: DiagnosePayload) {
-  if (!body.calibration || (body.decisions?.length ?? 0) < 5) throw new Error("decisions incomplete");
+  const gentle = body.arm === "gentle";
+  const answersLen = Array.isArray(body.answers) ? body.answers.length : 0;
+  if (!body.calibration || (gentle ? answersLen < 5 : (body.decisions?.length ?? 0) < 5)) {
+    throw new Error("answers incomplete");
+  }
 
   // Обрезаем ввод: не даём раздутым payload гнать лишние токены.
   body.name = capStr(body.name, 120);
   body.niche = capStr(body.niche, 120);
+  if (gentle) {
+    body.answers = (body.answers ?? []).slice(0, 20).map((a) => ({
+      situation: capStr(a?.situation, 200) ?? "",
+      chosen: capStr(a?.chosen, 160) ?? "",
+      chosenAxis: capStr(a?.chosenAxis, 24) ?? "",
+    }));
+  }
   body.decisions = (body.decisions ?? []).slice(0, 20).map((d) => ({
     situation: capStr(d?.situation, 200) ?? "",
     chosen: capStr(d?.chosen, 160) ?? "",
@@ -188,7 +212,9 @@ async function diagnose(body: DiagnosePayload) {
 
   const started = Date.now();
   const usage: LlmUsage[] = [...(body.deckUsage ?? [])];
-  const log = decisionLog(body);
+  const log = gentle
+    ? situationalLog({ name: body.name, niche: body.niche, calibration: body.calibration, answers: body.answers ?? [] })
+    : decisionLog(body);
   const lang = body.lang;
 
   let diagnosis = await runDiagnost(log, usage, undefined, lang);
@@ -206,7 +232,7 @@ async function diagnose(body: DiagnosePayload) {
   const { data, error } = await db
     .from("diagnostics")
     .insert({
-      input: { name: body.name, niche: body.niche, version: body.version, seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, links: body.links },
+      input: { name: body.name, niche: body.niche, version: body.version, arm: body.arm ?? "deck", seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, answers: body.answers, links: body.links },
       result: { ...diagnosis, sprints },
       validator: { ...validation, retried },
       usage,

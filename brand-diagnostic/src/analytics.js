@@ -20,6 +20,8 @@ function sessionId() {
 
 let niche = null;
 export function setTrackNiche(n) { niche = n; }
+let arm = null;
+export function setTrackArm(a) { arm = a; }
 
 // Согласие на аналитику/маркетинг (сторонние сервисы вроде GA). Первичная анонимная
 // продуктовая аналитика (track ниже) работает как легитимный интерес и не требует согласия.
@@ -34,7 +36,7 @@ export function track(name, props) {
     const body = JSON.stringify({
       sessionId: sessionId(),
       name,
-      props: { ...(props ?? {}), v: APP_VERSION },
+      props: { ...(props ?? {}), v: APP_VERSION, arm },
       niche,
       referrer: document.referrer || null,
     });

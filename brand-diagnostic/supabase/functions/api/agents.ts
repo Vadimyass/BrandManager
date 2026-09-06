@@ -87,6 +87,81 @@ ${PLAIN_LANGUAGE_RULE}
 Верни ТОЛЬКО JSON: {"cards":[{"situation":"...","left":"...","leftAxis":"ключ оси","right":"...","rightAxis":"ключ оси"}]}`;
 }
 
+// Вариант B (A/B): мягкий ситуативный опрос вместо дилемм «пожертвуй».
+export interface SituationalQuestion {
+  id: string;
+  situation: string;
+  options: { text: string; axis: string }[];
+}
+
+function generatorSituationalSystem(cal: Calibration): string {
+  return `Ты — тёплый бизнес-наставник в индустрии ${cal.industry} (${cal.model}). Сгенерируй 7 мягких ситуативных вопросов, чтобы понять, КАК человек думает о своём деле — без осуждения и без вынужденной жертвы.
+
+Правила:
+- Каждый вопрос — короткая реальная ситуация из жизни этого бизнеса, по-доброму, на «ты».
+- К каждому вопросу 4 варианта ответа. КАЖДЫЙ вариант — валидное, нормальное поведение (нет «глупых» и «правильных»). Человек просто выбирает самый честный для себя.
+- Каждый вариант однозначно тяготеет к одной оси: product (Продукт), marketing (Маркетинг), operations (Операционка), brand (Бренд). В каждом вопросе по возможности все 4 оси представлены.
+- situation — до 100 знаков, живым тёплым языком. Вариант — до 70 знаков, полноценный однозначный ответ.
+- Не давай понять, какой ответ «лучше». Тон — как у друга, которому интересно твоё дело.
+
+${PLAIN_LANGUAGE_RULE}
+
+Верни ТОЛЬКО JSON: {"questions":[{"situation":"...","options":[{"text":"...","axis":"ключ оси"},{"text":"...","axis":"ключ оси"},{"text":"...","axis":"ключ оси"},{"text":"...","axis":"ключ оси"}]}]}`;
+}
+
+export async function runGeneratorSituational(
+  cal: Calibration,
+  seed: SeedAnswer[],
+  name: string | undefined,
+  niche: string | undefined,
+  usage: LlmUsage[],
+  lang?: string,
+): Promise<SituationalQuestion[]> {
+  const res = await llmJson<{ questions: SituationalQuestion[] }>(
+    "assessor",
+    generatorSituationalSystem(cal) + langRule(lang),
+    seedLog(seed, name, niche),
+    usage,
+    1600,
+  );
+  return (res.questions ?? [])
+    .filter((q) => q?.situation && Array.isArray(q.options))
+    .map((q, i) => ({
+      id: `s${i}`,
+      situation: q.situation,
+      options: (q.options ?? [])
+        .filter((o) => o?.text && AXES_KEYS.includes(o.axis))
+        .slice(0, 4),
+    }))
+    .filter((q) => q.options.length >= 2)
+    .slice(0, 7);
+}
+
+// Лог для Диагноста в мягком режиме: перечень выборов + подсчёт внимания по осям.
+export function situationalLog(payload: {
+  name?: string;
+  niche?: string;
+  calibration: Calibration;
+  answers: { situation: string; chosen: string; chosenAxis: string }[];
+}): string {
+  const tally: Record<string, number> = { product: 0, marketing: 0, operations: 0, brand: 0 };
+  for (const a of payload.answers) if (a.chosenAxis in tally) tally[a.chosenAxis]++;
+  const lines = [
+    `Проект: ${payload.name || "без названия"}${payload.niche ? ` · Занятие: ${payload.niche}` : ""} · Индустрия: ${payload.calibration.industry} (${payload.calibration.model})`,
+    "",
+    "Ответы на ситуативные вопросы (что человек выбрал как самое близкое):",
+  ];
+  payload.answers.forEach((a, i) => {
+    lines.push(`${i + 1}. «${a.situation}» → «${a.chosen}» [${a.chosenAxis}]`);
+  });
+  lines.push(
+    "",
+    `Сколько раз выбрана каждая ось: Продукт ${tally.product}, Маркетинг ${tally.marketing}, Операционка ${tally.operations}, Бренд ${tally.brand}.`,
+    "Ось, которую человек выбирает редко или никогда, — его слепая зона; ось, которую выбирает чаще всего, — суперсила.",
+  );
+  return lines.join("\n");
+}
+
 const DIAGNOST_SYSTEM = `Ты — топовый бизнес-консультант. Тебе дают лог решений фаундера в формате trade-off: что выбрал и чем пожертвовал. Найди системный паттерн мышления.
 
 1. Суперсила — то, что он выбирает постоянно.

@@ -59,6 +59,15 @@ export const CSS = `
 .bd .artul{margin:0 0 15px;padding-left:20px}
 .bd .artul li{font-size:16.5px;line-height:1.6;margin-bottom:8px}
 .bd .artnext{margin-top:30px}
+/* Мягкий ситуативный опрос (A/B вариант B) */
+.bd .sit{max-width:640px;margin:0 auto;animation:fadeUp .3s both}
+.bd .sit .dots5{margin:0 auto 8px}
+.bd .sit-count{text-align:center;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:18px}
+.bd .sit-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.bd .sit-q{font-family:var(--disp);font-weight:700;font-size:clamp(19px,3.2vw,24px);line-height:1.25;color:var(--ink);padding-top:8px;animation:fadeUp .25s both}
+.bd .sit-opts{display:flex;flex-direction:column;gap:10px}
+.bd .sit-opt{text-align:left;padding:16px 18px;border:1.5px solid var(--line);border-radius:16px;background:var(--surface);font-family:var(--body);font-size:15.5px;line-height:1.4;color:var(--ink);cursor:pointer;transition:all .15s cubic-bezier(.2,.8,.2,1)}
+.bd .sit-opt:hover{transform:translateY(-2px);border-color:var(--amber);box-shadow:0 8px 20px rgba(1,71,83,.08)}
 .bd .cookiebar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;max-width:720px;margin:0 auto;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 16px 40px rgba(1,71,83,.16);padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;animation:fadeUp .4s both}
 .bd .cookietxt{flex:1;min-width:220px;font-size:13.5px;line-height:1.5;color:var(--ink)}
 .bd .cookietxt a{color:var(--teal);font-weight:600;white-space:nowrap}

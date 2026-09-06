@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AXIS_LABELS, LINK_FIELDS, NICHE_OPTIONS, SEED_CARDS } from "./cards.js";
 import { COURSE_PRICE, pickHook, WHAT_YOU_GET } from "./offer.js";
 import { clearSession, loadSession, PENDING_PHASES, saveSession } from "./session.js";
-import { setTrackNiche, track } from "./analytics.js";
+import { setTrackArm, setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
@@ -12,6 +12,19 @@ import { CSS } from "./styles.js";
 
 const FLY_MS = 420;
 const SWIPE_THRESHOLD = 90;
+
+// A/B фаза 1: "deck" — дилеммы «или-или», "gentle" — мягкий ситуативный опрос. 50/50, стабильно на сессию.
+const GENTLE_PCT = 50;
+function assignedArm() {
+  try {
+    let a = localStorage.getItem("melyo_arm");
+    if (a !== "deck" && a !== "gentle") {
+      a = Math.random() * 100 < GENTLE_PCT ? "gentle" : "deck";
+      localStorage.setItem("melyo_arm", a);
+    }
+    return a;
+  } catch { return "deck"; }
+}
 
 const QUOTES = [
   { text: "Бренд — это то, что говорят о тебе, когда тебя нет в комнате", author: "Джефф Безос" },
@@ -47,6 +60,34 @@ function CookieBanner() {
       <div className="cookiebtns">
         <button className="cookiebtn ghost" onClick={() => decide("necessary")}>{t("cookie_necessary")}</button>
         <button className="cookiebtn pri" onClick={() => decide("all")}>{t("cookie_all")}</button>
+      </div>
+    </div>
+  );
+}
+
+// Мягкий ситуативный опрос (A/B вариант B): по одному вопросу, один клик, без «жертвы».
+function SituationalDeck({ questions, onDone }) {
+  const [i, setI] = useState(0);
+  const answersRef = useRef([]);
+  const q = questions[i];
+  if (!q) return null;
+  const pick = (idx) => {
+    answersRef.current[i] = { id: q.id, optionIndex: idx };
+    if (i + 1 >= questions.length) onDone(answersRef.current);
+    else setI(i + 1);
+  };
+  return (
+    <div className="sit">
+      <div className="dots5">{questions.map((_, k) => <span key={k} className={"d5" + (k <= i ? " on" : "")} />)}</div>
+      <div className="sit-count">{i + 1} / {questions.length}</div>
+      <div className="sit-row">
+        <img src={`${import.meta.env.BASE_URL}mascot-stand.png`} alt="Мелио" className="meet-masc sm" />
+        <div className="sit-q" key={i}>{q.situation}</div>
+      </div>
+      <div className="sit-opts">
+        {q.options.map((o, idx) => (
+          <button className="sit-opt" key={idx} onClick={() => pick(idx)}>{o.text}</button>
+        ))}
       </div>
     </div>
   );
@@ -347,6 +388,8 @@ export default function App() {
   const [name, setName] = useState(s.name ?? "");
   const [niche, setNiche] = useState(s.niche ?? "");
   const [seedAnswers, setSeedAnswers] = useState(s.seedAnswers ?? []);
+  const [situational, setSituational] = useState(s.situational ?? []);
+  const [sitAnswers, setSitAnswers] = useState(s.sitAnswers ?? []);
   const [calibration, setCalibration] = useState(s.calibration ?? null);
   const [tradeoffs, setTradeoffs] = useState(s.tradeoffs ?? []);
   const [deckUsage, setDeckUsage] = useState(s.deckUsage ?? []);
@@ -384,8 +427,9 @@ export default function App() {
   const [articleSlug, setArticleSlug] = useState(null);
   const lastAction = useRef(null);
   const resumed = useRef(false);
+  const armRef = useRef(assignedArm());
 
-  useEffect(() => { track("landed"); }, []);
+  useEffect(() => { setTrackArm(armRef.current); track("landed", { arm: armRef.current }); }, []);
 
   // Шаро-ссылка на статью: .../#article=<slug> открывает её напрямую.
   useEffect(() => {
@@ -504,12 +548,29 @@ export default function App() {
     track("seed_done");
     guard(async () => {
       setPhase("prep");
-      const data = await getDeck(seed, name, niche);
+      const data = await getDeck(seed, name, niche, armRef.current);
       setCalibration(data.calibration);
       setDeckUsage(data.usage ?? []);
-      setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
+      if (data.arm === "gentle" && data.questions?.length) {
+        setSituational(data.questions);
+      } else {
+        setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
+      }
       setPhase("tradeoffs");
     });
+  }
+
+  // Мягкий вариант (B): из выборов строим decisions только с выбранной осью (без «жертвы»).
+  function onSituationalDone(res) {
+    const byId = new Map(situational.map((q) => [q.id, q]));
+    const answers = res.map((r) => {
+      const q = byId.get(r.id);
+      const opt = q?.options?.[r.optionIndex];
+      return { situation: q?.situation ?? "", chosen: opt?.text ?? "", chosenAxis: opt?.axis ?? "" };
+    });
+    setSitAnswers(answers);
+    track("tradeoffs_done", { arm: "gentle" });
+    setPhase("links");
   }
 
   function onTradeoffsDone(res) {
@@ -533,7 +594,7 @@ export default function App() {
   function assess(finalLinks = links, ds = decisions) {
     guard(async () => {
       setPhase("analyzing");
-      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, links: finalLinks, deckUsage, version: APP_VERSION });
+      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, answers: sitAnswers, arm: armRef.current, links: finalLinks, deckUsage, version: APP_VERSION });
       setResult(res.result);
       setDiagnosticId(res.id);
       track("diagnosis_shown", { weakness: res.result?.weakness?.axis });
@@ -712,10 +773,10 @@ export default function App() {
   useEffect(() => {
     if (phase === "intro" || phase === "welcome" || phase === "article") return;
     saveSession({
-      phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
+      phase, name, niche, seedAnswers, calibration, tradeoffs, situational, sitAnswers, deckUsage, decisions, links,
       result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
     });
-  }, [phase, name, niche, seedAnswers, calibration, tradeoffs, deckUsage, decisions, links,
+  }, [phase, name, niche, seedAnswers, calibration, tradeoffs, situational, sitAnswers, deckUsage, decisions, links,
     result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex]);
 
   // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
@@ -726,10 +787,14 @@ export default function App() {
 
     if (saved.phase === "prep" && saved.seedAnswers?.length) {
       guard(async () => {
-        const data = await getDeck(saved.seedAnswers, saved.name, saved.niche);
+        const data = await getDeck(saved.seedAnswers, saved.name, saved.niche, armRef.current);
         setCalibration(data.calibration);
         setDeckUsage(data.usage ?? []);
-        setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
+        if (data.arm === "gentle" && data.questions?.length) {
+          setSituational(data.questions);
+        } else {
+          setTradeoffs(data.cards.map((c) => ({ ...c, type: "duo", rows: true, q: c.situation })));
+        }
         setPhase("tradeoffs");
       });
     } else if (saved.phase === "analyzing" && saved.decisions?.length) {
@@ -741,7 +806,7 @@ export default function App() {
 
   const reset = () => {
     clearSession();
-    setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]);
+    setPhase("intro"); setName(""); setNiche(""); setSeedAnswers([]); setCalibration(null); setTradeoffs([]); setSituational([]); setSitAnswers([]);
     setLessons({}); setCourseTotal(10); setLessonStage("read"); setLessonIndex(0);
     setSubmission(""); setGrade(null); setGrading(false); setShared(false); setQuizResult(null); setHistoryIdx(null);
     setReadStep(0); setMeetStep(0); setProfileAnswers(["", "", ""]); setCourseLog({});
@@ -1035,7 +1100,7 @@ export default function App() {
           </div>
         )}
 
-        {phase === "tradeoffs" && tradeoffs.length > 0 && (
+        {phase === "tradeoffs" && (tradeoffs.length > 0 || situational.length > 0) && (
           <div className="phase">
             <FlowBar phase="tradeoffs" />
             {calibration && (
@@ -1044,12 +1109,16 @@ export default function App() {
                 <span className="pill">Метрика ниши: {calibration.key_metric}</span>
               </div>
             )}
-            <Deck
-              questions={tradeoffs}
-              onDone={onTradeoffsDone}
-              label={(i, t) => `Дилемма ${i} из ${t}`}
-              hint="Здесь нет правильных ответов — только твои приоритеты."
-            />
+            {situational.length > 0 ? (
+              <SituationalDeck questions={situational} onDone={onSituationalDone} />
+            ) : (
+              <Deck
+                questions={tradeoffs}
+                onDone={onTradeoffsDone}
+                label={(i, t) => `Дилемма ${i} из ${t}`}
+                hint="Здесь нет правильных ответов — только твои приоритеты."
+              />
+            )}
           </div>
         )}
 
