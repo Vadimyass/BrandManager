@@ -11,6 +11,19 @@ export function modelFor(role: AgentRole): string {
   return Deno.env.get(envKey) ?? DEFAULT_MODELS[role];
 }
 
+// Запасные модели: если основная упёрлась в лимит/недоступна — OpenRouter сам переключится
+// на следующую из списка (другая модель = другой пул). Переопределяется env MODEL_<ROLE>_FALLBACK.
+const DEFAULT_FALLBACKS: Record<AgentRole, string[]> = {
+  gate: ["google/gemini-2.0-flash-001"],
+  assessor: ["google/gemini-2.0-flash-001"],
+  validator: ["google/gemini-2.0-flash-001"],
+};
+function fallbacksFor(role: AgentRole): string[] {
+  const env = Deno.env.get(`MODEL_${role.toUpperCase()}_FALLBACK`);
+  if (env !== undefined) return env.split(",").map((s) => s.trim()).filter(Boolean);
+  return DEFAULT_FALLBACKS[role] ?? [];
+}
+
 export interface LlmUsage {
   role: AgentRole;
   model: string;
@@ -42,8 +55,10 @@ async function callModel(
   maxTokens: number,
   usageLog: LlmUsage[],
 ): Promise<string> {
+  const modelList = [model, ...fallbacksFor(role)].filter((m, i, a) => m && a.indexOf(m) === i);
   const mkBody = (mt: number) => JSON.stringify({
     model,
+    models: modelList, // OpenRouter: авто-переключение на запасную модель при 429/недоступности
     max_tokens: mt,
     temperature: 0.2,
     messages: [
