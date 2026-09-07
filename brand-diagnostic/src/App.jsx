@@ -368,9 +368,14 @@ function Deck({ questions, onDone, label, hint }) {
       </div>
       <div className="deck">{stack}</div>
       {card && !card.rows && (
-        <div className="deckbtns">
-          <button className="dbtn no" onClick={() => commit(card.left, -1)}>{card.left}</button>
-          <button className="dbtn yes" onClick={() => commit(card.right, 1)}>{card.right}</button>
+        <div className="deckbtns-wrap">
+          <div className="deckbtns">
+            <button className="dbtn no" onClick={() => commit(card.left, -1)}>{card.left}</button>
+            <button className="dbtn yes" onClick={() => commit(card.right, 1)}>{card.right}</button>
+          </div>
+          {card.skipLabel && (
+            <button className="dbtn both" onClick={() => commit(card.skipValue ?? card.skipLabel, 0)}>{card.skipLabel}</button>
+          )}
         </div>
       )}
       {hint && (

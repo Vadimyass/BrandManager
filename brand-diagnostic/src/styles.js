@@ -196,6 +196,9 @@ export const CSS = `
 .bd .dbtn.yes:hover{border-color:var(--amber)}
 .bd .dbtn.bool.yes{color:#014753;background:var(--amber);border-color:var(--amber)}
 .bd .dbtn.skip{font-size:13px;color:var(--muted);padding:10px 18px}
+.bd .deckbtns-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.bd .dbtn.both{background:var(--mint);border-color:var(--mint);color:var(--teal);font-size:14px;padding:11px 22px}
+.bd .dbtn.both:hover{border-color:var(--amber)}
 .bd .ladder{display:flex;flex-direction:column-reverse;gap:8px;margin:22px 0}
 .bd .rung{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);transition:all .3s}
 .bd .rung .rn{font-family:var(--mono);font-size:13px;color:var(--muted);width:18px}
