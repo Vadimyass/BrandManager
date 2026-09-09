@@ -1,6 +1,6 @@
 import { llmJson, type LlmUsage } from "./llm.ts";
 import { AXIS_NAMES, type Calibration, type Diagnosis, langRule } from "./agents.ts";
-import { buildRulesBlock, type CourseConfig, DEFAULT_CONFIG, difficultyLine } from "./config.ts";
+import { buildRulesBlock, type CourseConfig, type CourseModule, DEFAULT_CONFIG, DEFAULT_PROGRAM, difficultyLine } from "./config.ts";
 import { runMelio } from "./melio.ts";
 
 export interface QuizItem {
@@ -34,6 +34,8 @@ export interface Lesson {
   quiz: QuizItem[];
   takeaway: string;
   relevance: string;
+  axis?: string; // ось урока (для глобального курса)
+  module?: string; // заголовок модуля (для глобального курса)
 }
 
 type Depth = "intro" | "core" | "advanced";
@@ -172,6 +174,88 @@ export async function runCourse(
           ? runLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile, cfg)
           : melioLesson(i + j, axis, cal, niche, diagnosis, usage, lang, profile)
       ),
+    );
+    out.push(...done);
+  }
+  return out.sort((a, b) => a.index - b.index);
+}
+
+// ── Глобальный курс (scope=global) ────────────────────────────────────────────
+// Готовый бек под большую программу из модулей по всем осям. Живой путь (focus)
+// не трогаем: глобальный включается флагом cfg.scope === "global".
+
+export interface ProgramLesson extends LessonPlan {
+  axis: string;
+  axisIndex: number; // индекс урока внутри плана своей оси (для генераторов)
+  moduleId: string;
+  moduleTitle: string;
+}
+
+// Порядок осей, когда модули не заданы: слабое место — первым, сила — последней.
+export function axisOrder(diagnosis: Diagnosis): string[] {
+  const all = ["marketing", "brand", "product", "operations"];
+  const weak = diagnosis.weakness.axis;
+  const strong = diagnosis.superpower.axis;
+  const mid = all.filter((a) => a !== weak && a !== strong);
+  return [weak, ...mid.filter((a) => a !== weak && a !== strong), strong].filter(
+    (a, i, arr) => arr.indexOf(a) === i,
+  );
+}
+
+// Разворачивает модули (или порядок по диагнозу) в плоский упорядоченный план уроков.
+export function buildProgramPlan(diagnosis: Diagnosis, modules?: CourseModule[]): ProgramLesson[] {
+  const mods = modules?.length ? modules.filter((m) => m.enabled) : null;
+  const order = mods ? mods.map((m) => m.axis) : axisOrder(diagnosis);
+  const out: ProgramLesson[] = [];
+  for (const axis of order) {
+    const mod = mods?.find((m) => m.axis === axis);
+    const plan = planFor(axis);
+    const take = mod && mod.lessons > 0 ? plan.slice(0, mod.lessons) : plan;
+    take.forEach((p, k) => {
+      out.push({
+        ...p,
+        axis,
+        axisIndex: k,
+        moduleId: mod?.id ?? axis,
+        moduleTitle: mod?.title ?? AXIS_NAMES[axis] ?? axis,
+      });
+    });
+  }
+  return out;
+}
+
+export function programLength(diagnosis: Diagnosis, cfg: CourseConfig = DEFAULT_CONFIG): number {
+  return buildProgramPlan(diagnosis, cfg.modules ?? DEFAULT_PROGRAM).length;
+}
+
+// Генерит уроки всей программы. Переиспользует движки уроков по своей оси; сквозная
+// нумерация и метка модуля добавляются поверх. Анти-повтор пока внутри оси (понятия
+// осей и так различны) — кросс-осевой дедуп можно усилить позже.
+export async function runGlobalCourse(
+  cal: Calibration,
+  niche: string | undefined,
+  diagnosis: Diagnosis,
+  usage: LlmUsage[],
+  lang?: string,
+  profile?: string,
+  cfg: CourseConfig = DEFAULT_CONFIG,
+): Promise<Lesson[]> {
+  const program = buildProgramPlan(diagnosis, cfg.modules ?? DEFAULT_PROGRAM);
+  const total = program.length;
+  const out: Lesson[] = [];
+  for (let i = 0; i < program.length; i += CONCURRENCY) {
+    const batch = program.slice(i, i + CONCURRENCY);
+    const done = await Promise.all(
+      batch.map(async (pl, j) => {
+        const lesson = cfg.engine === "weights"
+          ? await runLesson(pl.axisIndex, pl.axis, cal, niche, diagnosis, usage, lang, profile, cfg)
+          : await melioLesson(pl.axisIndex, pl.axis, cal, niche, diagnosis, usage, lang, profile);
+        lesson.index = i + j;
+        lesson.total = total;
+        lesson.axis = pl.axis;
+        lesson.module = pl.moduleTitle;
+        return lesson;
+      }),
     );
     out.push(...done);
   }

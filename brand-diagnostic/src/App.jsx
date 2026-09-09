@@ -6,7 +6,7 @@ import { setTrackArm, setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
-import { checkEntitlement, diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
+import { analyzeSocial, checkEntitlement, diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
 import { getLang, LANGS, setLang, t } from "./i18n.js";
 import { CSS } from "./styles.js";
 
@@ -602,7 +602,16 @@ export default function App() {
   function assess(finalLinks = links, ds = decisions) {
     guard(async () => {
       setPhase("analyzing");
-      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, answers: sitAnswers, arm: armRef.current, links: finalLinks, deckUsage, version: APP_VERSION });
+      // Best-effort анализ публичной страницы (IG/TikTok): не блокируем диагноз при сбое.
+      let social = null;
+      const socialUrl = (finalLinks?.social || "").trim();
+      if (/instagram\.com|tiktok\.com/i.test(socialUrl)) {
+        try {
+          const sr = await analyzeSocial(socialUrl);
+          social = sr?.profile ?? null;
+        } catch { /* провайдер не настроен или недоступен — идём без соцданных */ }
+      }
+      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, answers: sitAnswers, arm: armRef.current, links: finalLinks, social, deckUsage, version: APP_VERSION });
       setResult(res.result);
       setDiagnosticId(res.id);
       track("diagnosis_shown", { weakness: res.result?.weakness?.axis });

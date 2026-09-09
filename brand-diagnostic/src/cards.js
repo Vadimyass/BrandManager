@@ -25,7 +25,7 @@ export const SEED_CARDS = [
   {
     id: "seed_how", type: "duo", tag: "Разминка", q: "Что у тебя покупают на самом деле?",
     left: "Готовый продукт", right: "Меня и мой опыт",
-    skippable: true, skipLabel: "Поровну", skipValue: "и продукт, и меня как эксперта",
+    skippable: true, skipLabel: "И то, и то", skipValue: "и продукт, и меня как эксперта",
   },
   {
     id: "seed_where", type: "duo", tag: "Разминка", q: "Где происходит сделка?",
@@ -40,7 +40,7 @@ export const SEED_CARDS = [
   {
     id: "seed_ticket", type: "duo", tag: "Разминка", q: "Твой средний чек — это…",
     left: "Мелкая покупка", right: "Дорогое решение",
-    skippable: true, skipLabel: "Средне", skipValue: "средний чек",
+    skippable: true, skipLabel: "И такой, и такой", skipValue: "и мелкие покупки, и дорогие решения",
   },
 ];
 

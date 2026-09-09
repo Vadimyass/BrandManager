@@ -15,12 +15,13 @@ import {
   type SeedAnswer,
   situationalLog,
 } from "./agents.ts";
-import { courseLength, planFor, runCourse, runLesson } from "./course.ts";
+import { courseLength, planFor, programLength, runCourse, runGlobalCourse, runLesson } from "./course.ts";
 import { runMelio } from "./melio.ts";
 import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
 import { paymentAdapter } from "./payments.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
 import { type CourseConfig, DEFAULT_CONFIG, normalizeConfig } from "./config.ts";
+import { analyzeSocial, socialContext, type SocialProfile } from "./social.ts";
 import type { LlmUsage } from "./llm.ts";
 
 const CORS = {
@@ -42,7 +43,7 @@ function json(data: unknown, status = 200): Response {
 }
 
 // Дорогие роуты (жгут кредиты LLM) — под рейт-лимитом.
-const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson"]);
+const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson", "social-analyze"]);
 // Служебные инструменты rules-lab — только под admin-ключом.
 const ADMIN_ONLY = new Set(["testlesson", "melio"]);
 const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_HOUR")) || 40;
@@ -111,6 +112,8 @@ Deno.serve(async (req) => {
         return json(await deck(body));
       case "diagnose":
         return json(await diagnose(body));
+      case "social-analyze":
+        return json(await socialAnalyze(body));
       case "course":
         return json(await course(body));
       case "grade":
@@ -165,6 +168,16 @@ async function deck(body: { seedAnswers: SeedAnswer[]; name?: string; niche?: st
   return { status: "ok", calibration, cards, arm: "deck", usage };
 }
 
+// Анализ публичной страницы (IG/TikTok): по ссылке возвращаем нормализованный профиль.
+// Фронт зовёт до диагностики и передаёт результат в diagnose как observed-контекст.
+async function socialAnalyze(body: { url?: string }) {
+  const url = capStr(body.url, 300);
+  if (!url) throw new Error("url required");
+  const profile = await analyzeSocial(url);
+  if (!profile) return { status: "ok", profile: null, note: "no data (нет ключа провайдера, приватный/пустой аккаунт или неподдерживаемая ссылка)" };
+  return { status: "ok", profile };
+}
+
 interface DiagnosePayload {
   name?: string;
   niche?: string;
@@ -176,6 +189,7 @@ interface DiagnosePayload {
   decisions: Decision[];
   answers?: { situation: string; chosen: string; chosenAxis: string }[];
   links?: Record<string, string>;
+  social?: SocialProfile;
   deckUsage?: LlmUsage[];
 }
 
@@ -212,9 +226,12 @@ async function diagnose(body: DiagnosePayload) {
 
   const started = Date.now();
   const usage: LlmUsage[] = [...(body.deckUsage ?? [])];
-  const log = gentle
+  const baseLog = gentle
     ? situationalLog({ name: body.name, niche: body.niche, calibration: body.calibration, answers: body.answers ?? [] })
     : decisionLog(body);
+  const log = body.social?.platform
+    ? `${baseLog}\n\n${socialContext(body.social)}`
+    : baseLog;
   const lang = body.lang;
 
   let diagnosis = await runDiagnost(log, usage, undefined, lang);
@@ -232,7 +249,7 @@ async function diagnose(body: DiagnosePayload) {
   const { data, error } = await db
     .from("diagnostics")
     .insert({
-      input: { name: body.name, niche: body.niche, version: body.version, arm: body.arm ?? "deck", seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, answers: body.answers, links: body.links },
+      input: { name: body.name, niche: body.niche, version: body.version, arm: body.arm ?? "deck", seedAnswers: body.seedAnswers, calibration: body.calibration, decisions: body.decisions, answers: body.answers, links: body.links, social: body.social ?? null },
       result: { ...diagnosis, sprints },
       validator: { ...validation, retried },
       usage,
@@ -260,8 +277,12 @@ async function course(body: { calibration: Calibration; niche?: string; diagnosi
   const usage: LlmUsage[] = [];
   const axis = body.diagnosis.weakness.axis;
   const cfg = await loadConfig();
+  if (cfg.scope === "global") {
+    const lessons = await runGlobalCourse(body.calibration, niche, body.diagnosis, usage, body.lang, profile, cfg);
+    return { status: "ok", lessons, total: programLength(body.diagnosis, cfg), scope: "global" };
+  }
   const lessons = await runCourse(axis, body.calibration, niche, body.diagnosis, usage, body.lang, profile, cfg);
-  return { status: "ok", lessons, total: courseLength(axis) };
+  return { status: "ok", lessons, total: courseLength(axis), scope: "focus" };
 }
 
 // Тестовый урок для лаборатории: генерит ОДИН урок по переданному (несохранённому)
