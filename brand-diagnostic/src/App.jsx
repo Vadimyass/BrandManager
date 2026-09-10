@@ -413,6 +413,37 @@ function ScanLines({ platform }) {
   );
 }
 
+// Визуальное «сканирование»: макет профиля, по которому идёт луч, сетка постов
+// загорается по очереди, Мелио рядом «смотрит». Только CSS-трансформы — легко на телефоне.
+function ScanStage({ platform }) {
+  const isTT = platform === "tiktok";
+  const tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  return (
+    <div className="scanstage">
+      <div className="scan-frame">
+        <div className="scan-beam" />
+        <div className="scan-prof">
+          <div className="scan-ava" />
+          <div className="scan-meta">
+            <span className="scan-plat">{isTT ? "TikTok" : "Instagram"}</span>
+            <div className="scan-l scan-l1" />
+            <div className="scan-l scan-l2" />
+          </div>
+        </div>
+        <div className="scan-grid">
+          {tiles.map((i) => (
+            <div key={i} className="scan-tile" style={{ animationDelay: `${0.5 + i * 0.22}s` }}>
+              <span className="scan-check" style={{ animationDelay: `${1.1 + i * 0.22}s` }} />
+            </div>
+          ))}
+        </div>
+        <img className="scan-mascot" src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" />
+      </div>
+      <ScanLines platform={platform} />
+    </div>
+  );
+}
+
 // Карточка-зеркало: что Мелио увидел на публичной странице + мостик к диагнозу.
 function SocialReveal({ social, result, onContinue }) {
   const isTT = social?.platform === "tiktok";
@@ -593,7 +624,7 @@ export default function App() {
       setResult(DEMO_RESULT);
       setScanning(true);
       setPhase("analyzing");
-      setTimeout(() => { setScanning(false); setPhase("socialReveal"); }, 4600);
+      setTimeout(() => { setScanning(false); setPhase("socialReveal"); }, 5200);
     }
   }
   useEffect(() => {
@@ -1300,7 +1331,7 @@ export default function App() {
               {scanning ? "Смотрю твою страницу" : "Ищу паттерн в твоих решениях"}
             </div>
             {scanning
-              ? <ScanLines platform={/tiktok\.com/i.test(links?.social || "") ? "tiktok" : "instagram"} />
+              ? <ScanStage platform={social?.platform || (/tiktok\.com/i.test(links?.social || "") ? "tiktok" : "instagram")} />
               : <Quotes />}
           </div>
         )}

@@ -537,7 +537,30 @@ export const CSS = `
 .bd .langsw-b.on{background:var(--amber);color:var(--teal)}
 
 /* Сканирование соцстраницы */
-.bd .scanlines{margin-top:22px;display:flex;flex-direction:column;gap:10px;max-width:420px;width:100%;text-align:left}
+.bd .scanstage{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%}
+.bd .scan-frame{position:relative;width:min(340px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;overflow:hidden;box-shadow:0 14px 40px rgba(1,71,83,.10)}
+.bd .scan-beam{position:absolute;left:0;right:0;height:60px;top:-60px;background:linear-gradient(180deg,rgba(1,210,127,0),rgba(1,210,127,.28),rgba(1,210,127,0));animation:scanBeam 1.9s cubic-bezier(.4,0,.2,1) infinite;z-index:3;pointer-events:none}
+.bd .scan-beam::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:2px;background:var(--amber);box-shadow:0 0 12px 2px rgba(1,210,127,.6)}
+@keyframes scanBeam{0%{top:-60px}100%{top:100%}}
+.bd .scan-prof{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.bd .scan-ava{width:52px;height:52px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--lav),var(--mint));animation:scanPulse 1.9s ease-in-out infinite}
+.bd .scan-meta{flex:1;display:flex;flex-direction:column;gap:7px}
+.bd .scan-plat{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--teal);background:var(--mint);padding:3px 9px;border-radius:999px;align-self:flex-start}
+.bd .scan-l{height:9px;border-radius:5px;background:var(--surface2)}
+.bd .scan-l1{width:70%}.bd .scan-l2{width:45%}
+.bd .scan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bd .scan-tile{position:relative;aspect-ratio:1;border-radius:12px;background:var(--surface2);opacity:.35;transform:scale(.9);animation:tilePop .5s cubic-bezier(.34,1.56,.64,1) forwards}
+.bd .scan-tile:nth-child(3n+1){background:linear-gradient(135deg,#D2FFB4,#01D27F33)}
+.bd .scan-tile:nth-child(3n+2){background:linear-gradient(135deg,#C5B6F2,#01475322)}
+.bd .scan-tile:nth-child(3n){background:linear-gradient(135deg,#01D27F22,#C5B6F2)}
+@keyframes tilePop{to{opacity:1;transform:scale(1)}}
+.bd .scan-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--amber);opacity:0;transform:scale(0);animation:checkPop .35s cubic-bezier(.34,1.56,.64,1) forwards}
+.bd .scan-check::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid var(--teal);border-width:0 2px 2px 0;transform:rotate(45deg)}
+@keyframes checkPop{to{opacity:1;transform:scale(1)}}
+.bd .scan-mascot{position:absolute;right:-6px;bottom:-6px;width:64px;height:64px;object-fit:contain;animation:scanBob 2.2s ease-in-out infinite;z-index:4}
+@keyframes scanBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(1,210,127,.4)}50%{box-shadow:0 0 0 8px rgba(1,210,127,0)}}
+.bd .scanlines{display:flex;flex-direction:column;gap:10px;max-width:420px;width:100%;text-align:left}
 .bd .scanline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ink);animation:fadeUp .3s both}
 .bd .scandot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex:none}
 
