@@ -16,7 +16,7 @@ import {
   situationalLog,
 } from "./agents.ts";
 import { courseLength, planFor, programLength, runCourse, runGlobalCourse, runLesson } from "./course.ts";
-import { runMelio } from "./melio.ts";
+import { runMelio, runMelioChat } from "./melio.ts";
 import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
 import { paymentAdapter } from "./payments.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
@@ -46,6 +46,8 @@ function json(data: unknown, status = 200): Response {
 const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson", "social-analyze"]);
 // Служебные инструменты rules-lab — только под admin-ключом.
 const ADMIN_ONLY = new Set(["testlesson", "melio"]);
+// Роуты Telegram-бота — под общим секретом (x-bot-secret). tg-token авторизуется JWT сам.
+const BOT_ONLY = new Set(["tg-link", "tg-chat", "tg-entitlement"]);
 const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_HOUR")) || 40;
 
 function clientId(req: Request, body: { sessionId?: string }): string {
@@ -76,6 +78,12 @@ function adminOk(body: { adminKey?: string }): boolean {
   return !!key && body?.adminKey === key;
 }
 
+// Роуты для Telegram-бота: доверенный вызов от нашего же бота по общему секрету.
+function botOk(req: Request): boolean {
+  const key = Deno.env.get("BOT_API_SECRET");
+  return !!key && req.headers.get("x-bot-secret") === key;
+}
+
 // Обрезка пользовательского ввода — чтобы раздутым payload не гнать лишние токены.
 function capStr(v: unknown, n: number): string | undefined {
   if (v == null) return undefined;
@@ -102,6 +110,10 @@ Deno.serve(async (req) => {
     if (ADMIN_ONLY.has(route ?? "") && !adminOk(body)) {
       return json({ error: "forbidden" }, 403);
     }
+    // Роуты бота — только по общему секрету от нашего Telegram-бота.
+    if (BOT_ONLY.has(route ?? "") && !botOk(req)) {
+      return json({ error: "forbidden" }, 403);
+    }
 
     switch (route) {
       case "checkout":
@@ -124,6 +136,14 @@ Deno.serve(async (req) => {
         return json(await testLesson(body));
       case "melio":
         return json(await melio(body));
+      case "tg-token":
+        return json(await tgToken(body));
+      case "tg-link":
+        return json(await tgLink(body));
+      case "tg-chat":
+        return json(await tgChat(body));
+      case "tg-entitlement":
+        return json(await tgEntitlement(body));
       case "track":
         return json(await track(body));
       case "feedback":
@@ -428,6 +448,80 @@ async function entitlement(body: { product?: string; userId?: string; email?: st
   q = userId && email ? q.or(`user_id.eq.${userId},email.eq.${email}`) : userId ? q.eq("user_id", userId) : q.eq("email", email);
   const { data, error } = await q.limit(1);
   if (error) { console.error("entitlement check:", error.message); return { active: false }; }
+  return { active: (data?.length ?? 0) > 0 };
+}
+
+// ── Telegram ────────────────────────────────────────────────────────────────
+
+// Фронт (залогинен) заводит одноразовый токен для deep-link «Подключить Telegram».
+async function tgToken(body: { accessToken?: string }) {
+  if (!body.accessToken) throw new Error("auth required");
+  const { data } = await db.auth.getUser(body.accessToken);
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("auth required");
+  const token = crypto.randomUUID().replace(/-/g, "");
+  const { error } = await db.from("telegram_tokens").insert({ token, user_id: userId });
+  if (error) throw error;
+  const bot = Deno.env.get("BOT_USERNAME");
+  return { status: "ok", token, deepLink: bot ? `https://t.me/${bot}?start=${token}` : null };
+}
+
+// Бот гасит токен при /start и связывает чат с пользователем.
+async function tgLink(body: { token?: string; chatId?: number }) {
+  const token = capStr(body.token, 64);
+  const chatId = Number(body.chatId);
+  if (!token || !Number.isFinite(chatId)) throw new Error("token and chatId required");
+  const { data: tok } = await db.from("telegram_tokens")
+    .select("user_id, used").eq("token", token).maybeSingle();
+  if (!tok || tok.used) return { status: "invalid" };
+  await db.from("telegram_tokens").update({ used: true }).eq("token", token);
+  await db.from("telegram_links").upsert({ chat_id: chatId, user_id: tok.user_id, active: true });
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", tok.user_id).maybeSingle();
+  const name = (prog?.data as { name?: string } | null)?.name ?? null;
+  return { status: "ok", userId: tok.user_id, name };
+}
+
+async function chatUserId(chatId: number): Promise<string | null> {
+  const { data } = await db.from("telegram_links")
+    .select("user_id").eq("chat_id", chatId).eq("active", true).maybeSingle();
+  return data?.user_id ?? null;
+}
+
+// Реплика Мелио в переписке: грузим память по chatId, отвечаем, дописываем дельту.
+async function tgChat(body: { chatId?: number; text?: string; mode?: string; lang?: string }) {
+  const chatId = Number(body.chatId);
+  const text = capStr(body.text, 2000);
+  if (!Number.isFinite(chatId) || !text) throw new Error("chatId and text required");
+  const userId = await chatUserId(chatId);
+  if (!userId) return { reply: "Похоже, аккаунт ещё не подключён. Открой меня из приложения Melyo по кнопке «Подключить Telegram»." };
+
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
+  const pdata = (prog?.data ?? {}) as Record<string, unknown>;
+  const memory = pdata.melio_memory ?? buildInitialMemory({});
+  const history = Array.isArray(pdata.tg_history) ? pdata.tg_history as { role: string; content: string }[] : [];
+
+  const usage: LlmUsage[] = [];
+  const out = await runMelioChat(memory, text, history, usage, body.lang);
+  const reply = String(out?.reply ?? "").trim() || "Дай мне секунду — сформулирую. Повтори, пожалуйста, чуть иначе?";
+
+  const memory_new = applyDelta(memory as MelioMemory, out?.memory_delta);
+  const nextHistory = [...history, { role: "user", content: text }, { role: "melio", content: reply }].slice(-20);
+  await db.from("progress").upsert({
+    user_id: userId,
+    data: { ...pdata, melio_memory: memory_new, tg_history: nextHistory },
+    updated_at: new Date().toISOString(),
+  });
+  return { reply, usage };
+}
+
+async function tgEntitlement(body: { chatId?: number; product?: string }) {
+  const chatId = Number(body.chatId);
+  if (!Number.isFinite(chatId)) return { active: false };
+  const userId = await chatUserId(chatId);
+  if (!userId) return { active: false };
+  const product = capStr(body.product, 40) || "course";
+  const { data } = await db.from("entitlements").select("id")
+    .eq("product", product).eq("status", "active").eq("user_id", userId).limit(1);
   return { active: (data?.length ?? 0) > 0 };
 }
 

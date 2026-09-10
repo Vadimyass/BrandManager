@@ -6,7 +6,7 @@ import { setTrackArm, setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
-import { analyzeSocial, checkEntitlement, diagnose, getCourse, getDeck, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
+import { analyzeSocial, checkEntitlement, diagnose, getCourse, getDeck, getTelegramLink, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
 import { getLang, LANGS, setLang, t } from "./i18n.js";
 import { CSS } from "./styles.js";
 
@@ -559,6 +559,7 @@ export default function App() {
   const [result, setResult] = useState(s.result ?? null);
   const [social, setSocial] = useState(s.social ?? null);
   const [scanning, setScanning] = useState(false);
+  const [tgBusy, setTgBusy] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState(s.diagnosticId ?? null);
   const [error, setError] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(s.feedbackSent ?? null);
@@ -796,6 +797,21 @@ export default function App() {
       // Если разобрали соцстраницу — сначала карточка-зеркало, потом полный диагноз.
       setPhase(socialProfile ? "socialReveal" : "result");
     });
+  }
+
+  // Подключение Telegram: берём одноразовый токен и открываем deep-link к боту.
+  async function connectTelegram() {
+    setTgBusy(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setTgBusy(false); return; }
+      const r = await getTelegramLink(token);
+      if (r?.deepLink) window.open(r.deepLink, "_blank", "noopener");
+      else if (r?.token) window.alert(`Открой бота Melyo и отправь: /start ${r.token}`);
+    } catch (_) { /* мягко игнорируем */ } finally {
+      setTgBusy(false);
+    }
   }
 
   // Оплата курса через провайдера (Lemon Squeezy). Если платежи ещё не настроены —
@@ -1172,6 +1188,12 @@ export default function App() {
                   ) : (
                     <div className="hint">Курс ещё не начат.</div>
                   )}
+                </div>
+
+                <div className="block">
+                  <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--violet)" }}>Мелио в Telegram</h3>
+                  <div className="hint" style={{ margin: "4px 0 10px" }}>Подключи Мелио в Telegram — он напомнит о шагах и разберёт твои посты прямо в переписке.</div>
+                  <button className="btn ghost" disabled={tgBusy} onClick={connectTelegram}>{tgBusy ? "Готовлю ссылку…" : "Подключить Telegram"}</button>
                 </div>
 
                 {progress.lessonLog && Object.keys(progress.lessonLog).length > 0 && (

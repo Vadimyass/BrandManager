@@ -29,3 +29,4 @@ export const gradeHomework = (axis, index, task, submission, calibration, niche)
   post("grade", { axis, index, task, submission, calibration, niche });
 export const startCheckout = (payload) => post("checkout", payload);
 export const checkEntitlement = (payload) => post("entitlement", payload);
+export const getTelegramLink = (accessToken) => post("tg-token", { accessToken });
