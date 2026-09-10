@@ -556,6 +556,7 @@ export default function App() {
   const [articleSlug, setArticleSlug] = useState(null);
   const lastAction = useRef(null);
   const resumed = useRef(false);
+  const demoRan = useRef(false);
   const armRef = useRef(assignedArm());
 
   useEffect(() => { setTrackArm(armRef.current); track("landed", { arm: armRef.current }); }, []);
@@ -584,11 +585,15 @@ export default function App() {
       routingRef.current = true;
       setPhase("cabinet");
     } else if (/#\/social-demo/.test(h)) {
-      // Превью карточки-зеркала без реального провайдера.
+      // Превью всего эпизода без реального провайдера: сканирование → карточка-зеркало.
+      if (demoRan.current) return;
+      demoRan.current = true;
       routingRef.current = true;
       setSocial(DEMO_SOCIAL);
       setResult(DEMO_RESULT);
-      setPhase("socialReveal");
+      setScanning(true);
+      setPhase("analyzing");
+      setTimeout(() => { setScanning(false); setPhase("socialReveal"); }, 4600);
     }
   }
   useEffect(() => {
