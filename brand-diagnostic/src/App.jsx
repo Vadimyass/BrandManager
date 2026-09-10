@@ -388,6 +388,125 @@ function Deck({ questions, onDone, label, hint }) {
   );
 }
 
+// Анимация «сканирую страницу»: строки проявляются по очереди, пока идёт анализ.
+function ScanLines({ platform }) {
+  const steps = [
+    "Открываю твою страницу…",
+    "Читаю описание профиля…",
+    platform === "tiktok" ? "Смотрю последние видео…" : "Смотрю последние посты…",
+    "Сверяю с тем, что ты рассказал…",
+    "Собираю разбор…",
+  ];
+  const [n, setN] = useState(1);
+  useEffect(() => {
+    const id = setInterval(() => setN((v) => (v < steps.length ? v + 1 : v)), 900);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="scanlines">
+      {steps.slice(0, n).map((s, i) => (
+        <div key={i} className="scanline" style={{ animationDelay: `${i * 0.05}s` }}>
+          <span className="scandot" /> {s}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Карточка-зеркало: что Мелио увидел на публичной странице + мостик к диагнозу.
+function SocialReveal({ social, result, onContinue }) {
+  const isTT = social?.platform === "tiktok";
+  const handle = social?.handle || "";
+  const followers = typeof social?.followers === "number" ? social.followers.toLocaleString("ru-RU") : null;
+  const posts = Array.isArray(social?.posts) ? social.posts : [];
+  const stat = social?.stat || null; // {value,label} — опц., бэк может заполнить позже
+  const highlights = Array.isArray(social?.highlights) ? social.highlights : [];
+  const superT = result?.superpower?.title;
+  const weakT = result?.weakness?.title;
+  const weakLbl = (AXIS_LABELS[result?.weakness?.axis] || "").toLowerCase();
+  const superLbl = (AXIS_LABELS[result?.superpower?.axis] || "").toLowerCase();
+
+  return (
+    <div className="phase sreveal">
+      <div className="srv-bar">
+        <span className="srv-eye"><img src={`${import.meta.env.BASE_URL}mascot-cool.png`} alt="" /></span>
+        Мелио посмотрел твою страницу
+      </div>
+
+      <div className="srv-body">
+        <div className="srv-head">
+          <span className={`srv-plat ${isTT ? "tt" : "ig"}`}>{isTT ? "TikTok" : "Instagram"}</span>
+          <div>
+            <div className="srv-handle">@{handle}</div>
+            <div className="srv-sub">
+              {social?.category ? social.category : "Публичная страница"}
+              {followers ? ` · ${followers} подписчиков` : ""}
+            </div>
+          </div>
+        </div>
+
+        {social?.bio && (
+          <div className="srv-card">
+            <div className="srv-cap">Что говорит твоё био</div>
+            <div className="srv-quote">«{social.bio}»</div>
+          </div>
+        )}
+
+        {(stat || highlights.length > 0) && (
+          <div className="srv-card">
+            <div className="srv-cap">Что я увидел в постах</div>
+            {stat && (
+              <div className="srv-stat">
+                <span className="srv-statv">{stat.value}</span>
+                <span className="srv-statl">{stat.label}</span>
+              </div>
+            )}
+            {highlights.map((h, i) => (
+              <div key={i} className="srv-hl"><span className="scandot" /> {h}</div>
+            ))}
+          </div>
+        )}
+
+        {!stat && !highlights.length && posts.length > 0 && (
+          <div className="srv-card">
+            <div className="srv-cap">Что я увидел в постах</div>
+            <div className="srv-quote">Прошёлся по {posts.length} последним постам — учёл их в разборе.</div>
+          </div>
+        )}
+
+        {(superT || weakT) && (
+          <div className="srv-hook">
+            {superT && <>Сильная сторона у тебя — <b>{superLbl || "видно сразу"}</b>: {superT.toLowerCase()}. </>}
+            {weakT && <>А вот <b>{weakLbl}</b> недобирает — {weakT.toLowerCase()}. С этого и начнём.</>}
+          </div>
+        )}
+
+        <button className="btn srv-cta" onClick={onContinue}>Посмотреть мой разбор целиком</button>
+        <div className="srv-priv">Смотрю только публичную страницу · данные не храню</div>
+      </div>
+    </div>
+  );
+}
+
+// Демо-данные для превью экрана без реального провайдера (#/social-demo).
+const DEMO_SOCIAL = {
+  platform: "instagram",
+  handle: "tvoya_studia",
+  category: "Дизайн-студия",
+  followers: 2340,
+  bio: "Делаем сайты и брендинг под ключ",
+  posts: new Array(12).fill(""),
+  stat: { value: "9 / 12", label: "постов — про процесс и «как красиво», а не про результат для клиента" },
+  highlights: [
+    "Ни в одном посте нет цены или оффера — непонятно, как к тебе прийти",
+    "Сторис активные, но в шапке нет ссылки на заявку",
+  ],
+};
+const DEMO_RESULT = {
+  superpower: { axis: "product", title: "Ты делаешь сильный продукт" },
+  weakness: { axis: "marketing", title: "показываешь, как делаешь, но не зачем это клиенту" },
+};
+
 export default function App() {
   const saved = useRef(loadSession()).current;
   const s = saved ?? {};
@@ -404,6 +523,8 @@ export default function App() {
   const [decisions, setDecisions] = useState(s.decisions ?? []);
   const [links, setLinks] = useState(s.links ?? { store: "", landing: "", social: "" });
   const [result, setResult] = useState(s.result ?? null);
+  const [social, setSocial] = useState(s.social ?? null);
+  const [scanning, setScanning] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState(s.diagnosticId ?? null);
   const [error, setError] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(s.feedbackSent ?? null);
@@ -462,6 +583,12 @@ export default function App() {
     } else if (/#\/cabinet/.test(h)) {
       routingRef.current = true;
       setPhase("cabinet");
+    } else if (/#\/social-demo/.test(h)) {
+      // Превью карточки-зеркала без реального провайдера.
+      routingRef.current = true;
+      setSocial(DEMO_SOCIAL);
+      setResult(DEMO_RESULT);
+      setPhase("socialReveal");
     }
   }
   useEffect(() => {
@@ -603,18 +730,22 @@ export default function App() {
     guard(async () => {
       setPhase("analyzing");
       // Best-effort анализ публичной страницы (IG/TikTok): не блокируем диагноз при сбое.
-      let social = null;
+      let socialProfile = null;
       const socialUrl = (finalLinks?.social || "").trim();
-      if (/instagram\.com|tiktok\.com/i.test(socialUrl)) {
+      const hasSocial = /instagram\.com|tiktok\.com/i.test(socialUrl);
+      setScanning(hasSocial);
+      if (hasSocial) {
         try {
           const sr = await analyzeSocial(socialUrl);
-          social = sr?.profile ?? null;
+          socialProfile = sr?.profile ?? null;
         } catch { /* провайдер не настроен или недоступен — идём без соцданных */ }
       }
-      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, answers: sitAnswers, arm: armRef.current, links: finalLinks, social, deckUsage, version: APP_VERSION });
+      const res = await diagnose({ name, niche, seedAnswers, calibration, decisions: ds, answers: sitAnswers, arm: armRef.current, links: finalLinks, social: socialProfile, deckUsage, version: APP_VERSION });
       setResult(res.result);
+      setSocial(socialProfile);
+      setScanning(false);
       setDiagnosticId(res.id);
-      track("diagnosis_shown", { weakness: res.result?.weakness?.axis });
+      track("diagnosis_shown", { weakness: res.result?.weakness?.axis, social: !!socialProfile });
       persist({
         weaknessAxis: res.result?.weakness?.axis,
         weaknessLabel: AXIS_LABELS[res.result?.weakness?.axis] ?? "",
@@ -623,7 +754,8 @@ export default function App() {
         maxLesson: 0, homework: {},
         melioMemory: res.memory ?? null,
       });
-      setPhase("result");
+      // Если разобрали соцстраницу — сначала карточка-зеркало, потом полный диагноз.
+      setPhase(socialProfile ? "socialReveal" : "result");
     });
   }
 
@@ -791,10 +923,10 @@ export default function App() {
     if (phase === "intro" || phase === "welcome" || phase === "article") return;
     saveSession({
       phase, name, niche, seedAnswers, calibration, tradeoffs, situational, sitAnswers, deckUsage, decisions, links,
-      result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
+      result, social, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex,
     });
   }, [phase, name, niche, seedAnswers, calibration, tradeoffs, situational, sitAnswers, deckUsage, decisions, links,
-    result, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex]);
+    result, social, diagnosticId, feedbackSent, email, joined, intent, lessons, courseTotal, lessonStage, lessonIndex]);
 
   // Если вкладку выгрузили во время генерации — повторяем запрос сами, человек ничего не теряет.
   useEffect(() => {
@@ -1159,9 +1291,17 @@ export default function App() {
         {phase === "analyzing" && (
           <div className="center phase">
             <div className="spin" />
-            <div className="eyebrow" style={{ color: "var(--violet)" }}>Ищу паттерн в твоих решениях</div>
-            <Quotes />
+            <div className="eyebrow" style={{ color: "var(--violet)" }}>
+              {scanning ? "Смотрю твою страницу" : "Ищу паттерн в твоих решениях"}
+            </div>
+            {scanning
+              ? <ScanLines platform={/tiktok\.com/i.test(links?.social || "") ? "tiktok" : "instagram"} />
+              : <Quotes />}
           </div>
+        )}
+
+        {phase === "socialReveal" && social && (
+          <SocialReveal social={social} result={result} onContinue={() => setPhase("result")} />
         )}
 
         {phase === "error" && (
