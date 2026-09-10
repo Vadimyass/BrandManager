@@ -3,7 +3,16 @@
 // bio, категорию, число подписчиков и тексты последних постов — без данных подписчиков.
 // Ключи и id акторов — из окружения; без ключа функция мягко возвращает null.
 
+import { computeInsights, type Insight, insightsToCard } from "./insights.ts";
+
 export type SocialPlatform = "instagram" | "tiktok";
+
+export interface PostStat {
+  type: "photo" | "carousel" | "video" | "unknown";
+  likes: number;
+  comments: number;
+  ts?: string; // ISO-дата публикации
+}
 
 export interface SocialProfile {
   platform: SocialPlatform;
@@ -12,7 +21,12 @@ export interface SocialProfile {
   bio: string;
   category?: string;
   followers?: number;
-  posts: string[]; // тексты/подписи последних постов
+  externalUrl?: string; // ссылка из шапки (для инсайта «воронка-тупик»)
+  posts: string[]; // тексты/подписи последних постов (контекст для агентов)
+  postStats?: PostStat[]; // тип/вовлечение/дата — для движка инсайтов
+  insights?: Insight[]; // сработавшие наблюдения
+  stat?: { value: string; label: string }; // топ-инсайт для карточки
+  highlights?: string[]; // ещё 1–2 наблюдения для карточки
 }
 
 const APIFY_BASE = "https://api.apify.com/v2";
@@ -75,6 +89,41 @@ function toNumber(v: unknown): number | undefined {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
 }
 
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
+
+// Собираем сырые объекты постов из разных форматов вывода актора.
+function collectPostRows(items: Record<string, unknown>[]): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  for (const it of items) {
+    const latest = it.latestPosts ?? it.posts ?? it.topPosts;
+    if (Array.isArray(latest)) rows.push(...(latest as Record<string, unknown>[]));
+    else if (it.caption != null || it.likesCount != null || it.type != null) rows.push(it);
+  }
+  return rows.slice(0, POSTS_LIMIT);
+}
+
+function mapPostType(raw: unknown): PostStat["type"] {
+  const t = String(raw ?? "").toLowerCase();
+  if (t.includes("sidecar") || t.includes("carousel")) return "carousel";
+  if (t.includes("video") || t.includes("reel") || t.includes("clips")) return "video";
+  if (t.includes("image") || t.includes("photo") || t.includes("graphimage")) return "photo";
+  return "unknown";
+}
+
+function extractPostStats(rows: Record<string, unknown>[]): PostStat[] {
+  return rows.map((p) => ({
+    type: mapPostType(p.type ?? p.productType ?? p.mediaType),
+    likes: num(p.likesCount ?? p.likes ?? p.diggCount),
+    comments: num(p.commentsCount ?? p.comments ?? p.commentCount),
+    ts: typeof (p.timestamp ?? p.taken_at ?? p.createTimeISO) === "string"
+      ? String(p.timestamp ?? p.taken_at ?? p.createTimeISO)
+      : undefined,
+  }));
+}
+
 async function analyzeInstagram(url: string, handle: string, token: string): Promise<SocialProfile> {
   const items = (await runActor(IG_ACTOR, {
     directUrls: [url],
@@ -83,6 +132,7 @@ async function analyzeInstagram(url: string, handle: string, token: string): Pro
     addParentData: false,
   }, token)) as Record<string, unknown>[];
   const head = items[0] ?? {};
+  const rows = collectPostRows(items);
   return {
     platform: "instagram",
     handle: String(head.username ?? handle),
@@ -90,7 +140,9 @@ async function analyzeInstagram(url: string, handle: string, token: string): Pro
     bio: pickText(head.biography ?? head.bio),
     category: pickText(head.businessCategoryName ?? head.category) || undefined,
     followers: toNumber(head.followersCount ?? head.followers),
+    externalUrl: pickText(head.externalUrl ?? head.external_url ?? head.bioLink) || "",
     posts: extractPosts(items),
+    postStats: extractPostStats(rows),
   };
 }
 
@@ -103,6 +155,7 @@ async function analyzeTikTok(url: string, handle: string, token: string): Promis
   }, token)) as Record<string, unknown>[];
   const head = items[0] ?? {};
   const authorMeta = (head.authorMeta ?? {}) as Record<string, unknown>;
+  const rows = collectPostRows(items).length ? collectPostRows(items) : (items as Record<string, unknown>[]);
   return {
     platform: "tiktok",
     handle: String(authorMeta.name ?? handle),
@@ -110,7 +163,9 @@ async function analyzeTikTok(url: string, handle: string, token: string): Promis
     bio: pickText(authorMeta.signature ?? head.signature),
     category: undefined,
     followers: toNumber(authorMeta.fans ?? head.fans),
+    externalUrl: pickText(authorMeta.bioLink ?? head.bioLink) || "",
     posts: extractPosts(items),
+    postStats: extractPostStats(rows.map((r) => ({ ...r, type: r.type ?? "video" }))),
   };
 }
 
@@ -125,7 +180,13 @@ export async function analyzeSocial(url: string): Promise<SocialProfile | null> 
     const profile = platform === "instagram"
       ? await analyzeInstagram(url, handle, token)
       : await analyzeTikTok(url, handle, token);
-    return (profile.bio || profile.posts.length) ? profile : null;
+    if (!(profile.bio || profile.posts.length)) return null;
+    const insights = computeInsights(profile);
+    const card = insightsToCard(insights);
+    profile.insights = insights;
+    if (card.stat) profile.stat = card.stat;
+    if (card.highlights.length) profile.highlights = card.highlights;
+    return profile;
   } catch (e) {
     console.error("analyzeSocial", e instanceof Error ? e.message : String(e));
     return null;
@@ -140,6 +201,13 @@ export function socialContext(profile: SocialProfile): string {
     profile.category ? `Категория: ${profile.category}.` : "",
     profile.bio ? `Био: «${profile.bio}»` : "",
   ].filter(Boolean);
+  if (profile.externalUrl != null) {
+    lines.push(profile.externalUrl ? `Ссылка в шапке: есть.` : `Ссылки/оффера в шапке нет.`);
+  }
+  if (profile.insights?.length) {
+    lines.push("Замеченные сигналы (данные страницы против бенчмарков):");
+    profile.insights.forEach((i) => lines.push(`— ${i.value}: ${i.label}`));
+  }
   if (profile.posts.length) {
     lines.push("Тексты последних постов:");
     profile.posts.forEach((p, i) => lines.push(`${i + 1}. ${p}`));
