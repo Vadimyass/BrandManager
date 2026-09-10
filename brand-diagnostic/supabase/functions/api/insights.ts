@@ -9,7 +9,18 @@ export interface Insight {
   severity: number; // 1..3 — насколько острое (3 = самое сильное)
   value: string; // короткая цифра для крупной подачи
   label: string; // человеческая расшифровка наблюдения
+  lesson: string; // мостик: что с этим сделаем в курсе
 }
+
+// Мостик к курсу для каждого наблюдения (намёк, что в платной части починим).
+const LESSON: Record<string, string> = {
+  er: "В курсе — как растить внимание, а не просто число подписчиков",
+  format: "Разберём, какой формат под какую задачу и как их чередовать",
+  passive: "Покажу, как писать так, чтобы сохраняли и пересылали, а не пролистывали",
+  cadence: "Соберём простой ритм постинга, который реально держать",
+  niche: "Как выделиться оффером там, где контентом уже не пробиться",
+  funnel: "Настроим путь от поста к заявке, чтобы внимание не утекало",
+};
 
 const SATURATED = ["beauty", "красот", "космет", "retail", "магазин", "одежд", "fashion", "мода"];
 
@@ -32,7 +43,7 @@ function medianGapDays(timestamps: number[]): number | null {
 export function computeInsights(p: SocialProfile): Insight[] {
   const posts = Array.isArray(p.postStats) ? p.postStats : [];
   const withEng = posts.filter((x) => (x.likes ?? 0) > 0 || (x.comments ?? 0) > 0);
-  const out: Insight[] = [];
+  const out: Omit<Insight, "lesson">[] = [];
 
   // 1. Парадокс подписчиков: вовлечение против нормы для размера аккаунта.
   if (p.followers && p.followers > 0 && withEng.length >= 3) {
@@ -109,15 +120,17 @@ export function computeInsights(p: SocialProfile): Insight[] {
     });
   }
 
-  return out.sort((a, b) => b.severity - a.severity);
+  return out
+    .map((i) => ({ ...i, lesson: LESSON[i.id] ?? "" }))
+    .sort((a, b) => b.severity - a.severity);
 }
 
 // Верхний инсайт → крупная цифра карточки; ещё 1–2 → наблюдения списком.
-export function insightsToCard(insights: Insight[]): { stat: { value: string; label: string } | null; highlights: string[] } {
+export function insightsToCard(insights: Insight[]): { stat: { value: string; label: string; lesson?: string } | null; highlights: string[] } {
   if (!insights.length) return { stat: null, highlights: [] };
   const [top, ...rest] = insights;
   return {
-    stat: { value: top.value, label: top.label },
+    stat: { value: top.value, label: top.label, lesson: top.lesson },
     highlights: rest.slice(0, 2).map((i) => i.label),
   };
 }

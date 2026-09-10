@@ -582,6 +582,8 @@ export const CSS = `
 .bd .srv-stat{display:flex;align-items:baseline;gap:10px}
 .bd .srv-statv{font-family:var(--disp);font-weight:800;font-size:30px;line-height:1;color:var(--greenDeep);flex:none}
 .bd .srv-statl{font-size:14px;line-height:1.4;color:var(--ink)}
+.bd .srv-lesson{display:flex;align-items:flex-start;gap:7px;margin-top:10px;font-size:12.5px;line-height:1.45;color:var(--greenDeep);font-weight:600}
+.bd .srv-arr{flex:none}
 .bd .srv-hl{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.5;color:var(--ink);margin-top:9px}
 .bd .srv-hl .scandot{margin-top:6px}
 .bd .srv-hook{border-left:3px solid var(--amber);background:var(--mint);border-radius:0 14px 14px 0;padding:14px 16px;margin:4px 0 18px;font-size:15px;line-height:1.6;color:var(--teal)}

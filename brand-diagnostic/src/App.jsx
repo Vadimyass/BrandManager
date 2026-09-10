@@ -487,10 +487,13 @@ function SocialReveal({ social, result, onContinue }) {
           <div className="srv-card">
             <div className="srv-cap">Что я увидел в постах</div>
             {stat && (
-              <div className="srv-stat">
-                <span className="srv-statv">{stat.value}</span>
-                <span className="srv-statl">{stat.label}</span>
-              </div>
+              <>
+                <div className="srv-stat">
+                  <span className="srv-statv">{stat.value}</span>
+                  <span className="srv-statl">{stat.label}</span>
+                </div>
+                {stat.lesson && <div className="srv-lesson"><span className="srv-arr">→</span> {stat.lesson}</div>}
+              </>
             )}
             {highlights.map((h, i) => (
               <div key={i} className="srv-hl"><span className="scandot" /> {h}</div>
@@ -527,7 +530,7 @@ const DEMO_SOCIAL = {
   followers: 2340,
   bio: "Делаем сайты и брендинг под ключ",
   posts: new Array(12).fill(""),
-  stat: { value: "9 / 12", label: "постов — про процесс и «как красиво», а не про результат для клиента" },
+  stat: { value: "9 / 12", label: "постов — про процесс и «как красиво», а не про результат для клиента", lesson: "Покажу, как писать так, чтобы сохраняли и пересылали, а не пролистывали" },
   highlights: [
     "Ни в одном посте нет цены или оффера — непонятно, как к тебе прийти",
     "Сторис активные, но в шапке нет ссылки на заявку",
