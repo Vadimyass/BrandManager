@@ -6,7 +6,7 @@ import { setTrackArm, setTrackNiche, track } from "./analytics.js";
 import { authErrorFromUrl, loadProgress, saveProgress, signInWithGoogle, signOut, supabase } from "./auth.js";
 import { APP_VERSION } from "./version.js";
 import { ARTICLES, articleBySlug } from "./articles.js";
-import { analyzeSocial, checkEntitlement, diagnose, getCourse, getDeck, getTelegramLink, gradeHomework, joinWaitlist, sendFeedback, startCheckout } from "./api.js";
+import { analyzeSocial, checkEntitlement, craftArtifact, diagnose, generatePlan, getCourse, getDeck, getPlan, getTelegramLink, gradeHomework, joinWaitlist, reassessProgress, reviewArtifact, sendFeedback, startCheckout, togglePlanStep } from "./api.js";
 import { getLang, LANGS, setLang, t } from "./i18n.js";
 import { CSS } from "./styles.js";
 
@@ -560,6 +560,15 @@ export default function App() {
   const [social, setSocial] = useState(s.social ?? null);
   const [scanning, setScanning] = useState(false);
   const [tgBusy, setTgBusy] = useState(false);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewResult, setReviewResult] = useState(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reassessResult, setReassessResult] = useState(null);
+  const [reassessBusy, setReassessBusy] = useState(false);
+  const [craftItems, setCraftItems] = useState(null);
+  const [craftBusy, setCraftBusy] = useState("");
+  const [plan, setPlan] = useState(null);
+  const [planBusy, setPlanBusy] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState(s.diagnosticId ?? null);
   const [error, setError] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(s.feedbackSent ?? null);
@@ -814,8 +823,99 @@ export default function App() {
     }
   }
 
+  // Разбор материала (review): отправляем текст → Мелио возвращает сильное/слабое/шаг.
+  async function submitReview() {
+    const artifact = reviewText.trim();
+    if (artifact.length < 10) return;
+    setReviewBusy(true);
+    setReviewResult(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setReviewBusy(false); return; }
+      const r = await reviewArtifact(token, artifact);
+      if (r?.status === "rate") setReviewResult({ error: "Слишком часто. Попробуй через пару минут." });
+      else setReviewResult(r?.review ?? null);
+    } catch (_) {
+      setReviewResult({ error: "Не получилось разобрать — попробуй ещё раз." });
+    } finally {
+      setReviewBusy(false);
+    }
+  }
+
+  // Ре-диагностика: агент пересматривает уровень по свежим работам.
+  async function submitReassess() {
+    setReassessBusy(true);
+    setReassessResult(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setReassessBusy(false); return; }
+      const r = await reassessProgress(token, reviewText.trim() || undefined);
+      if (r?.status === "rate") setReassessResult({ error: "Ре-диагностику можно запускать пару раз в день. Попробуй позже." });
+      else if (r?.status === "empty") setReassessResult({ error: r.message });
+      else setReassessResult({ ...(r?.reassess ?? {}), prevLevel: r?.prevLevel });
+    } catch (_) {
+      setReassessResult({ error: "Не получилось пересмотреть — попробуй ещё раз." });
+    } finally {
+      setReassessBusy(false);
+    }
+  }
+
+  // «Сделай за меня»: Мелио draftит шапку/оффер/посты по памяти.
+  async function submitCraft(kind) {
+    setCraftBusy(kind);
+    setCraftItems(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setCraftBusy(""); return; }
+      const r = await craftArtifact(token, kind);
+      if (r?.status === "rate") setCraftItems({ error: "Слишком часто. Попробуй через пару минут." });
+      else setCraftItems({ kind, items: r?.items ?? [] });
+    } catch (_) {
+      setCraftItems({ error: "Не получилось сгенерировать — попробуй ещё раз." });
+    } finally {
+      setCraftBusy("");
+    }
+  }
+
+  // План на 30 дней + стрик.
+  async function loadPlan() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return;
+      const r = await getPlan(token);
+      setPlan(r?.plan ?? null);
+    } catch (_) { /* тихо */ }
+  }
+  async function makePlan() {
+    setPlanBusy(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setPlanBusy(false); return; }
+      const r = await generatePlan(token);
+      if (r?.plan) setPlan(r.plan);
+    } catch (_) { /* тихо */ } finally {
+      setPlanBusy(false);
+    }
+  }
+  async function toggleStep(index) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return;
+      const r = await togglePlanStep(token, index);
+      if (r?.plan) setPlan(r.plan);
+    } catch (_) { /* тихо */ }
+  }
+
+  useEffect(() => { if (phase === "cabinet" && user) loadPlan(); }, [phase, user]);
+
   // Оплата курса через провайдера (Lemon Squeezy). Если платежи ещё не настроены —
-  // мягко откатываемся к брони по почте, ничего не ломая.
+  // мягко откатываемся к брони по почте, ничего не ломается.
   async function pay() {
     setPaying(true);
     track("buy_clicked");
@@ -1194,6 +1294,94 @@ export default function App() {
                   <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--violet)" }}>Мелио в Telegram</h3>
                   <div className="hint" style={{ margin: "4px 0 10px" }}>Подключи Мелио в Telegram — он напомнит о шагах и разберёт твои посты прямо в переписке.</div>
                   <button className="btn ghost" disabled={tgBusy} onClick={connectTelegram}>{tgBusy ? "Готовлю ссылку…" : "Подключить Telegram"}</button>
+                </div>
+
+                <div className="block">
+                  <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--amber)" }}>Разбор материала</h3>
+                  <div className="hint" style={{ margin: "4px 0 10px" }}>Вставь текст поста, прайса или шапки — Мелио скажет, что сильно, где слабое место и что изменить в первую очередь.</div>
+                  <textarea className="field" rows={4} style={{ resize: "vertical" }} placeholder="Вставь сюда текст своего поста / прайса / шапки…" value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
+                  <button className="btn amber" style={{ marginTop: 10 }} disabled={reviewBusy || reviewText.trim().length < 10} onClick={submitReview}>{reviewBusy ? "Разбираю…" : "Разобрать"}</button>
+                  {reviewResult && (
+                    <div className="card" style={{ marginTop: 12 }}>
+                      {reviewResult.error
+                        ? <div className="err">{reviewResult.error}</div>
+                        : <>
+                            {reviewResult.strength && <p style={{ margin: "0 0 10px" }}><b>Что сильно:</b> {reviewResult.strength}</p>}
+                            {reviewResult.weak && <p style={{ margin: "0 0 10px" }}><b>Слабое место:</b> {reviewResult.weak}</p>}
+                            {reviewResult.one_change && <p style={{ margin: 0 }}><b>Одно важное изменение:</b> {reviewResult.one_change}</p>}
+                          </>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="block">
+                  <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--violet)" }}>Сделай за меня</h3>
+                  <div className="hint" style={{ margin: "4px 0 10px" }}>Мелио сам набросает готовый черновик по твоему делу — останется поправить под себя.</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <button className="btn ghost" disabled={!!craftBusy} onClick={() => submitCraft("bio")}>{craftBusy === "bio" ? "Пишу…" : "Шапка профиля"}</button>
+                    <button className="btn ghost" disabled={!!craftBusy} onClick={() => submitCraft("offer")}>{craftBusy === "offer" ? "Пишу…" : "Оффер"}</button>
+                    <button className="btn ghost" disabled={!!craftBusy} onClick={() => submitCraft("posts")}>{craftBusy === "posts" ? "Пишу…" : "3 идеи постов"}</button>
+                  </div>
+                  {craftItems && (
+                    <div className="card" style={{ marginTop: 12 }}>
+                      {craftItems.error
+                        ? <div className="err">{craftItems.error}</div>
+                        : (craftItems.items?.length
+                            ? craftItems.items.map((it, i) => (
+                                <p key={i} style={{ margin: i ? "12px 0 0" : 0, whiteSpace: "pre-wrap" }}>{it}</p>
+                              ))
+                            : <div className="hint">Пока мало данных о твоём деле — расскажи Мелио больше в диалоге, и он сделает точнее.</div>)}
+                    </div>
+                  )}
+                </div>
+
+                {(progress.maxLesson || 0) > 0 && (
+                  <div className="block">
+                    <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--violet)" }}>Проверить прогресс</h3>
+                    <div className="hint" style={{ margin: "4px 0 10px" }}>Мелио пересмотрит твой уровень по домашкам и свежим работам — покажет, вырос ли ты со старта.</div>
+                    <button className="btn ghost" disabled={reassessBusy} onClick={submitReassess}>{reassessBusy ? "Пересматриваю…" : "Пересмотреть уровень"}</button>
+                    {reassessResult && (
+                      <div className="card" style={{ marginTop: 12 }}>
+                        {reassessResult.error
+                          ? <div className="err">{reassessResult.error}</div>
+                          : <>
+                              <div className="big" style={{ fontSize: "clamp(20px,4vw,26px)" }}>
+                                {reassessResult.moved_up ? "Ты вырос" : "Уровень"}: {reassessResult.prevLevel ? `L${reassessResult.prevLevel} → ` : ""}L{reassessResult.level ?? "?"}
+                              </div>
+                              {reassessResult.evidence && <p style={{ margin: "8px 0 0" }}>{reassessResult.evidence}</p>}
+                            </>}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="block">
+                  <h3 style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--amber)" }}>План на 30 дней</h3>
+                  {!plan ? (
+                    <>
+                      <div className="hint" style={{ margin: "4px 0 10px" }}>Мелио соберёт персональный план из маленьких шагов под твоё слабое место — отмечай сделанное и держи серию.</div>
+                      <button className="btn amber" disabled={planBusy} onClick={makePlan}>{planBusy ? "Собираю план…" : "Составить план"}</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+                        <div className="hint">Сделано {plan.done?.length || 0} из {plan.items.length}</div>
+                        <div style={{ fontFamily: "var(--disp)", fontWeight: 700, color: "var(--greenDeep)" }}>Серия: {plan.streak || 0} дн.</div>
+                      </div>
+                      <div className="planlist">
+                        {plan.items.map((step, i) => {
+                          const done = (plan.done || []).includes(i);
+                          return (
+                            <button key={i} className={`planstep${done ? " done" : ""}`} onClick={() => toggleStep(i)}>
+                              <span className="planbox">{done ? "✓" : ""}</span>
+                              <span className="plantext">{step}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button className="btnlink" style={{ marginTop: 10 }} disabled={planBusy} onClick={makePlan}>{planBusy ? "Обновляю…" : "Пересобрать план"}</button>
+                    </>
+                  )}
                 </div>
 
                 {progress.lessonLog && Object.keys(progress.lessonLog).length > 0 && (

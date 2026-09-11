@@ -16,7 +16,7 @@ import {
   situationalLog,
 } from "./agents.ts";
 import { courseLength, planFor, programLength, runCourse, runGlobalCourse, runLesson } from "./course.ts";
-import { runMelio, runMelioChat, runMelioCheckin } from "./melio.ts";
+import { runMelio, runMelioChat, runMelioCheckin, runMelioCraft, runMelioPlan } from "./melio.ts";
 import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
 import { paymentAdapter } from "./payments.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
@@ -43,9 +43,9 @@ function json(data: unknown, status = 200): Response {
 }
 
 // Дорогие роуты (жгут кредиты LLM) — под рейт-лимитом.
-const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson", "social-analyze"]);
+const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "testlesson", "social-analyze", "review", "reassess", "craft"]);
 // Служебные инструменты rules-lab — только под admin-ключом.
-const ADMIN_ONLY = new Set(["testlesson", "melio"]);
+const ADMIN_ONLY = new Set(["testlesson", "melio", "admin-stats"]);
 // Роуты Telegram-бота — под общим секретом (x-bot-secret). tg-token авторизуется JWT сам.
 const BOT_ONLY = new Set(["tg-link", "tg-chat", "tg-entitlement", "tg-checkins"]);
 const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_HOUR")) || 40;
@@ -139,6 +139,14 @@ Deno.serve(async (req) => {
         return json(await course(body));
       case "grade":
         return json(await grade(body));
+      case "review":
+        return json(await review(body));
+      case "reassess":
+        return json(await reassess(body));
+      case "craft":
+        return json(await craft(body));
+      case "plan":
+        return json(await plan(body));
       case "config":
         return json(await config(req, body));
       case "testlesson":
@@ -155,6 +163,8 @@ Deno.serve(async (req) => {
         return json(await tgEntitlement(body));
       case "tg-checkins":
         return json(await tgCheckins(body));
+      case "admin-stats":
+        return json(await adminStats());
       case "track":
         return json(await track(body));
       case "feedback":
@@ -492,6 +502,149 @@ async function tgLink(body: { token?: string; chatId?: number }) {
   return { status: "ok", userId: tok.user_id, name };
 }
 
+interface ReviewOut {
+  strength?: string;
+  weak?: string;
+  one_change?: string;
+}
+function formatReview(review: unknown): string {
+  const r = (review ?? {}) as ReviewOut;
+  const parts = [
+    r.strength ? `Что сильно: ${r.strength}` : "",
+    r.weak ? `Слабое место: ${r.weak}` : "",
+    r.one_change ? `Одно важное изменение: ${r.one_change}` : "",
+  ].filter(Boolean);
+  return parts.length ? parts.join("\n\n") : "Пришли текст поста, прайса или шапки — и я разберу.";
+}
+
+// Разбор материала для кабинета (веб). Личность из JWT, память из progress, лимит на юзера.
+async function review(body: { accessToken?: string; artifact?: string; lang?: string }) {
+  if (!body.accessToken) throw new Error("auth required");
+  const { data } = await db.auth.getUser(body.accessToken);
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("auth required");
+  const artifact = capStr(body.artifact, 6000);
+  if (!artifact || artifact.trim().length < 10) throw new Error("empty artifact");
+  if (!(await underLimit(`review:${userId}`, 12, 3600_000))) return { status: "rate" };
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
+  const memory = (prog?.data as Record<string, unknown> | null)?.melio_memory ?? buildInitialMemory({});
+  const usage: LlmUsage[] = [];
+  const out = await runMelio("review", memory, { artifact }, usage, body.lang);
+  return { status: "ok", review: out.review, usage };
+}
+
+// Ре-диагностика прогресса: по свежим работам (домашки + артефакт) агент пересматривает
+// уровень и сравнивает с историей диагностики. Дорого — жёсткий лимит на юзера.
+async function reassess(body: { accessToken?: string; artifact?: string; lang?: string }) {
+  if (!body.accessToken) throw new Error("auth required");
+  const { data } = await db.auth.getUser(body.accessToken);
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("auth required");
+  if (!(await underLimit(`reassess:${userId}`, 3, 86400_000))) return { status: "rate" };
+
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
+  const pdata = (prog?.data ?? {}) as Record<string, unknown>;
+  const memory = pdata.melio_memory ?? buildInitialMemory({});
+  const prevLevel = Number((memory as MelioMemory)?.level ?? 1);
+
+  // Свежие доказательства: сдачи домашек из истории уроков + необязательный артефакт.
+  const log = (pdata.lessonLog ?? {}) as Record<string, { homework?: { submission?: string } }>;
+  const answers = Object.values(log)
+    .map((l) => l?.homework?.submission)
+    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    .slice(0, 20);
+  const artifact = capStr(body.artifact, 6000) ?? "";
+  if (!answers.length && artifact.trim().length < 10) {
+    return { status: "empty", message: "Пока мало материала для пересмотра — пройди пару уроков с домашкой или вставь свою свежую работу." };
+  }
+
+  const usage: LlmUsage[] = [];
+  const out = await runMelio("reassess", memory, { answers, artifact }, usage, body.lang);
+  const memory_new = applyDelta(memory as MelioMemory, out?.memory_delta);
+  const ra = (out?.reassess ?? {}) as { level?: number; moved_up?: boolean };
+  const newLevel = Number(ra.level ?? prevLevel);
+  (memory_new as MelioMemory).level = Math.min(5, Math.max(1, newLevel));
+  await db.from("progress").upsert({
+    user_id: userId,
+    data: { ...pdata, melio_memory: memory_new },
+    updated_at: new Date().toISOString(),
+  });
+  return { status: "ok", reassess: out?.reassess, prevLevel, usage };
+}
+
+// «Сделай за меня»: Мелио draftит шапку/оффер/посты по памяти. JWT + лимит.
+async function craft(body: { accessToken?: string; kind?: string; lang?: string }) {
+  if (!body.accessToken) throw new Error("auth required");
+  const { data } = await db.auth.getUser(body.accessToken);
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("auth required");
+  const kind = (["bio", "offer", "posts"].includes(body.kind ?? "") ? body.kind : "bio") as "bio" | "offer" | "posts";
+  if (!(await underLimit(`craft:${userId}`, 15, 3600_000))) return { status: "rate" };
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
+  const memory = (prog?.data as Record<string, unknown> | null)?.melio_memory ?? buildInitialMemory({});
+  const usage: LlmUsage[] = [];
+  const out = await runMelioCraft(memory, kind, usage, body.lang);
+  const items = Array.isArray(out?.items) ? out.items.filter((x) => typeof x === "string" && x.trim()).slice(0, 5) : [];
+  return { status: "ok", kind, items, usage };
+}
+
+interface PlanData {
+  items: string[];
+  done: number[];
+  streak: number;
+  lastDoneDay: string | null;
+  startedAt: number;
+}
+function dayStr(ts = Date.now()): string {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+// План на 30 дней + стрик. action: generate | done | get. Личность из JWT.
+async function plan(body: { accessToken?: string; action?: string; index?: number; lang?: string }) {
+  if (!body.accessToken) throw new Error("auth required");
+  const { data } = await db.auth.getUser(body.accessToken);
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("auth required");
+  const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
+  const pdata = (prog?.data ?? {}) as Record<string, unknown>;
+  let planData = pdata.plan as PlanData | undefined;
+  const action = body.action ?? "get";
+
+  if (action === "generate") {
+    if (!(await underLimit(`plan:${userId}`, 5, 86400_000))) return { status: "rate" };
+    const memory = pdata.melio_memory ?? buildInitialMemory({});
+    const usage: LlmUsage[] = [];
+    const out = await runMelioPlan(memory, usage, body.lang);
+    const items = Array.isArray(out?.items) ? out.items.filter((x) => typeof x === "string" && x.trim()).slice(0, 12) : [];
+    if (!items.length) return { status: "empty" };
+    planData = { items, done: [], streak: 0, lastDoneDay: null, startedAt: Date.now() };
+    await db.from("progress").upsert({ user_id: userId, data: { ...pdata, plan: planData }, updated_at: new Date().toISOString() });
+    return { status: "ok", plan: planData };
+  }
+
+  if (action === "done") {
+    if (!planData) return { status: "empty" };
+    const i = Math.floor(Number(body.index));
+    if (!Number.isFinite(i) || i < 0 || i >= planData.items.length) throw new Error("bad index");
+    const done = new Set(planData.done ?? []);
+    if (done.has(i)) {
+      done.delete(i);
+    } else {
+      done.add(i);
+      const today = dayStr();
+      if (planData.lastDoneDay !== today) {
+        planData.streak = planData.lastDoneDay === dayStr(Date.now() - 86400_000) ? (planData.streak || 0) + 1 : 1;
+        planData.lastDoneDay = today;
+      }
+    }
+    planData.done = [...done].sort((a, b) => a - b);
+    await db.from("progress").upsert({ user_id: userId, data: { ...pdata, plan: planData }, updated_at: new Date().toISOString() });
+    return { status: "ok", plan: planData };
+  }
+
+  return { status: "ok", plan: planData ?? null };
+}
+
 async function chatUserId(chatId: number): Promise<string | null> {
   const { data } = await db.from("telegram_links")
     .select("user_id").eq("chat_id", chatId).eq("active", true).maybeSingle();
@@ -518,8 +671,14 @@ async function tgChat(body: { chatId?: number; text?: string; mode?: string; lan
   const pdata = (prog?.data ?? {}) as Record<string, unknown>;
   const memory = pdata.melio_memory ?? buildInitialMemory({});
   const history = Array.isArray(pdata.tg_history) ? pdata.tg_history as { role: string; content: string }[] : [];
-
   const usage: LlmUsage[] = [];
+
+  // Разбор материала (review): текст-артефакт → сильное/слабое/одно изменение.
+  if (body.mode === "review") {
+    const out = await runMelio("review", memory, { artifact: text }, usage, body.lang);
+    return { reply: formatReview(out.review), usage };
+  }
+
   const out = await runMelioChat(memory, text, history, usage, body.lang);
   const reply = String(out?.reply ?? "").trim() || "Дай мне секунду — сформулирую. Повтори, пожалуйста, чуть иначе?";
 
@@ -577,6 +736,45 @@ async function tgEntitlement(body: { chatId?: number; product?: string }) {
   const { data } = await db.from("entitlements").select("id")
     .eq("product", product).eq("status", "active").eq("user_id", userId).limit(1);
   return { active: (data?.length ?? 0) > 0 };
+}
+
+// Кокпит метрик для админки. Только под admin-ключом. Считаем строки (не уникальные
+// сессии) — для быстрого пульса этого достаточно.
+async function adminStats() {
+  const since7 = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const cnt = async (table: string, build?: (q: ReturnType<typeof db.from>) => unknown): Promise<number> => {
+    try {
+      let q = db.from(table).select("id", { count: "exact", head: true });
+      if (build) q = build(q) as typeof q;
+      const { count } = await q;
+      return count ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+  const ev = (name: string) => cnt("events", (q) => q.eq("name", name));
+
+  const [diagTotal, diag7, entActive, waitlist, telegram, landed, shown, buy] = await Promise.all([
+    cnt("diagnostics"),
+    cnt("diagnostics", (q) => q.gte("created_at", since7)),
+    cnt("entitlements", (q) => q.eq("status", "active")),
+    cnt("waitlist"),
+    cnt("telegram_links", (q) => q.eq("active", true)),
+    ev("landed"),
+    ev("diagnosis_shown"),
+    ev("buy_clicked"),
+  ]);
+
+  const conv = landed ? Math.round((buy / landed) * 1000) / 10 : 0;
+  return {
+    status: "ok",
+    diagnostics: { total: diagTotal, last7: diag7 },
+    entitlements: entActive,
+    waitlist,
+    telegram,
+    funnel: { landed, diagnosis_shown: shown, buy_clicked: buy },
+    conversionPct: conv,
+  };
 }
 
 async function track(body: { sessionId: string; name: string; props?: unknown; niche?: string; referrer?: string }) {

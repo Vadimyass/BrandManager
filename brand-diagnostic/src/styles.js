@@ -590,4 +590,13 @@ export const CSS = `
 .bd .srv-hook b{font-weight:700}
 .bd .srv-cta{width:100%}
 .bd .srv-priv{text-align:center;font-size:12px;color:var(--muted-d);margin-top:12px}
+
+/* План на 30 дней */
+.bd .planlist{display:flex;flex-direction:column;gap:8px}
+.bd .planstep{display:flex;align-items:flex-start;gap:10px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer;font-family:var(--body);font-size:15px;line-height:1.4;transition:all .15s}
+.bd .planstep:hover{border-color:var(--amber)}
+.bd .planstep.done{background:var(--mint);border-color:var(--mint)}
+.bd .planstep.done .plantext{opacity:.65;text-decoration:line-through}
+.bd .planbox{flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-d);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--teal);font-size:14px}
+.bd .planstep.done .planbox{background:var(--amber);border-color:var(--amber)}
 `;

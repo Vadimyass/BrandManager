@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Melyo — кокпит</title>
+  <style>
+    :root{--bg:#F4F3FA;--card:#fff;--ink:#1A1B33;--muted:#6A7A82;--line:#E7E4F3;--green:#01D27F;--teal:#014753;--mint:#D2FFB4}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:clamp(16px,4vw,40px)}
+    h1{font-size:24px;font-weight:800;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:10px}
+    button{font-family:inherit;font-weight:700;font-size:14px;padding:11px 20px;border-radius:999px;border:none;background:var(--green);color:var(--teal);cursor:pointer}
+    button:disabled{opacity:.5}
+    .conn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:460px;margin-bottom:24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+    .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .metric .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .metric .val{font-size:30px;font-weight:800;margin-top:6px}
+    .funnel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:520px}
+    .frow{display:flex;align-items:center;gap:12px;margin:8px 0}
+    .fbar{height:26px;border-radius:8px;background:var(--mint);min-width:2px}
+    .fname{width:150px;font-size:13px;color:var(--ink)}
+    .fnum{font-weight:700;font-size:14px}
+    .err{color:#C0392B;font-size:13px}
+  </style>
+</head>
+<body>
+  <h1>Melyo — кокпит</h1>
+  <div class="sub">Пульс продукта: диагностики, воронка, конверсия. Данные обновляются по кнопке.</div>
+
+  <div class="conn" id="conn">
+    <label>Supabase URL</label>
+    <input id="url" placeholder="https://xxxx.supabase.co" />
+    <label>anon / publishable ключ</label>
+    <input id="anon" type="password" placeholder="eyJ..." />
+    <label>admin-ключ (CONFIG_ADMIN_KEY)</label>
+    <input id="admin" type="password" placeholder="секрет функции" />
+    <button id="load">Показать метрики</button>
+    <div id="err" class="err" style="margin-top:8px"></div>
+  </div>
+
+  <div id="out" style="display:none">
+    <div class="grid" id="cards"></div>
+    <div class="funnel">
+      <div style="font-weight:700;margin-bottom:10px">Воронка</div>
+      <div id="funnel"></div>
+    </div>
+    <button id="refresh" style="margin-top:20px;background:#fff;border:1px solid var(--line);color:var(--ink)">Обновить</button>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const KEY = "melyo_admin_conn";
+    (function restore(){ try{ const c=JSON.parse(localStorage.getItem(KEY)||"{}"); $("url").value=c.url||""; $("anon").value=c.anon||""; $("admin").value=c.admin||""; }catch(_){} })();
+
+    async function load(){
+      const url=$("url").value.replace(/\/+$/,""), anon=$("anon").value.trim(), admin=$("admin").value.trim();
+      $("err").textContent="";
+      if(!url||!anon||!admin){ $("err").textContent="Заполни все три поля."; return; }
+      localStorage.setItem(KEY, JSON.stringify({url,anon,admin}));
+      $("load").disabled=true; $("load").textContent="Загружаю…";
+      try{
+        const res=await fetch(url+"/functions/v1/api/admin-stats",{method:"POST",
+          headers:{"Content-Type":"application/json","apikey":anon,"Authorization":"Bearer "+anon},
+          body:JSON.stringify({adminKey:admin})});
+        const d=await res.json();
+        if(!res.ok||d.status!=="ok") throw new Error(d.error||"Ошибка "+res.status);
+        render(d);
+      }catch(e){ $("err").textContent=String(e.message||e); }
+      finally{ $("load").disabled=false; $("load").textContent="Показать метрики"; }
+    }
+
+    function render(d){
+      $("out").style.display="block";
+      $("cards").innerHTML=[
+        ["Диагностик всего", d.diagnostics.total],
+        ["За 7 дней", d.diagnostics.last7],
+        ["Оплат (активных)", d.entitlements],
+        ["Конверсия, %", d.conversionPct],
+        ["В Telegram", d.telegram],
+        ["В листе ожидания", d.waitlist],
+      ].map(([l,v])=>`<div class="metric"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join("");
+      const f=d.funnel, max=Math.max(f.landed,1);
+      $("funnel").innerHTML=[
+        ["Зашли", f.landed],["Увидели диагноз", f.diagnosis_shown],["Нажали купить", f.buy_clicked],
+      ].map(([n,v])=>`<div class="frow"><div class="fname">${n}</div><div class="fbar" style="width:${Math.round(v/max*100)}%"></div><div class="fnum">${v}</div></div>`).join("");
+    }
+
+    $("load").onclick=load; $("refresh").onclick=load;
+  </script>
+</body>
+</html>

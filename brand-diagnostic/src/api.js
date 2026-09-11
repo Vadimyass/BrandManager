@@ -30,3 +30,9 @@ export const gradeHomework = (axis, index, task, submission, calibration, niche)
 export const startCheckout = (payload) => post("checkout", payload);
 export const checkEntitlement = (payload) => post("entitlement", payload);
 export const getTelegramLink = (accessToken) => post("tg-token", { accessToken });
+export const reviewArtifact = (accessToken, artifact) => post("review", { accessToken, artifact });
+export const reassessProgress = (accessToken, artifact) => post("reassess", { accessToken, artifact });
+export const craftArtifact = (accessToken, kind) => post("craft", { accessToken, kind });
+export const getPlan = (accessToken) => post("plan", { accessToken, action: "get" });
+export const generatePlan = (accessToken) => post("plan", { accessToken, action: "generate" });
+export const togglePlanStep = (accessToken, index) => post("plan", { accessToken, action: "done", index });
