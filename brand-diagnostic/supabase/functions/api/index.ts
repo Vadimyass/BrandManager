@@ -56,22 +56,31 @@ function clientId(req: Request, body: { sessionId?: string }): string {
   return ip || (body?.sessionId ? `s:${String(body.sessionId).slice(0, 64)}` : "anon");
 }
 
-// Скользящее окно 1 час на клиента (IP/сессия), общее по дорогим роутам.
-async function underRateLimit(req: Request, body: { sessionId?: string }): Promise<boolean> {
+// Скользящее окно на ключ: не больше limit событий за windowMs. При сбое счётчика
+// не блокируем легитимных.
+async function underLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
   try {
-    const key = `llm:${clientId(req, body)}`;
-    const since = new Date(Date.now() - 3600_000).toISOString();
+    const since = new Date(Date.now() - windowMs).toISOString();
     await db.from("rate_limits").delete().eq("key", key).lt("created_at", since);
     const { count } = await db.from("rate_limits").select("id", { count: "exact", head: true })
       .eq("key", key).gte("created_at", since);
-    if ((count ?? 0) >= RATE_LIMIT) return false;
+    if ((count ?? 0) >= limit) return false;
     await db.from("rate_limits").insert({ key });
     return true;
   } catch (e) {
     console.error("rate limit:", e);
-    return true; // не блокируем легитимных из-за сбоя счётчика
+    return true;
   }
 }
+
+// Скользящее окно 1 час на клиента (IP/сессия), общее по дорогим роутам.
+function underRateLimit(req: Request, body: { sessionId?: string }): Promise<boolean> {
+  return underLimit(`llm:${clientId(req, body)}`, RATE_LIMIT, 3600_000);
+}
+
+// Лимиты чата бота на один Telegram-чат.
+const TG_CHAT_PER_HOUR = Number(Deno.env.get("TG_CHAT_PER_HOUR")) || 20;
+const TG_CHAT_PER_DAY = Number(Deno.env.get("TG_CHAT_PER_DAY")) || 60;
 
 function adminOk(body: { adminKey?: string }): boolean {
   const key = Deno.env.get("CONFIG_ADMIN_KEY");
@@ -496,6 +505,14 @@ async function tgChat(body: { chatId?: number; text?: string; mode?: string; lan
   if (!Number.isFinite(chatId) || !text) throw new Error("chatId and text required");
   const userId = await chatUserId(chatId);
   if (!userId) return { reply: "Похоже, аккаунт ещё не подключён. Открой меня из приложения Melyo по кнопке «Подключить Telegram»." };
+
+  // Защита от «высасывания» LLM: лимит сообщений на чат (в час и в сутки).
+  if (!(await underLimit(`tgchat:h:${chatId}`, TG_CHAT_PER_HOUR, 3600_000))) {
+    return { reply: "Много сообщений подряд — дай мне перевести дух. Напиши через пару минут." };
+  }
+  if (!(await underLimit(`tgchat:d:${chatId}`, TG_CHAT_PER_DAY, 86400_000))) {
+    return { reply: "На сегодня мы с тобой хорошо поработали — продолжим завтра. Я никуда не денусь." };
+  }
 
   const { data: prog } = await db.from("progress").select("data").eq("user_id", userId).maybeSingle();
   const pdata = (prog?.data ?? {}) as Record<string, unknown>;
