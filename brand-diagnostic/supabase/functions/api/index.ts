@@ -16,7 +16,7 @@ import {
   situationalLog,
 } from "./agents.ts";
 import { courseLength, planFor, programLength, runCourse, runGlobalCourse, runLesson } from "./course.ts";
-import { runMelio, runMelioChat } from "./melio.ts";
+import { runMelio, runMelioChat, runMelioCheckin } from "./melio.ts";
 import { applyDelta, buildInitialMemory, type MelioMemory } from "./memory.ts";
 import { paymentAdapter } from "./payments.ts";
 import { gradeHomework, homeworkFor } from "./homework.ts";
@@ -47,7 +47,7 @@ const EXPENSIVE = new Set(["deck", "diagnose", "course", "grade", "melio", "test
 // Служебные инструменты rules-lab — только под admin-ключом.
 const ADMIN_ONLY = new Set(["testlesson", "melio"]);
 // Роуты Telegram-бота — под общим секретом (x-bot-secret). tg-token авторизуется JWT сам.
-const BOT_ONLY = new Set(["tg-link", "tg-chat", "tg-entitlement"]);
+const BOT_ONLY = new Set(["tg-link", "tg-chat", "tg-entitlement", "tg-checkins"]);
 const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_HOUR")) || 40;
 
 function clientId(req: Request, body: { sessionId?: string }): string {
@@ -144,6 +144,8 @@ Deno.serve(async (req) => {
         return json(await tgChat(body));
       case "tg-entitlement":
         return json(await tgEntitlement(body));
+      case "tg-checkins":
+        return json(await tgCheckins(body));
       case "track":
         return json(await track(body));
       case "feedback":
@@ -512,6 +514,41 @@ async function tgChat(body: { chatId?: number; text?: string; mode?: string; lan
     updated_at: new Date().toISOString(),
   });
   return { reply, usage };
+}
+
+// Проактивные чек-ины: собираем связанных пользователей, кому пора (раз в неделю),
+// генерим реплику Мелио по памяти и отдаём боту готовые {chatId, text} для отправки.
+async function tgCheckins(body: { limit?: number; minDays?: number }) {
+  const limit = Math.min(Math.max(Math.floor(Number(body.limit) || 20), 1), 50);
+  const minDays = Math.min(Math.max(Math.floor(Number(body.minDays) || 7), 1), 60);
+  const cutoff = Date.now() - minDays * 86400_000;
+  const { data: links } = await db.from("telegram_links")
+    .select("chat_id, user_id").eq("active", true).limit(300);
+  const usage: LlmUsage[] = [];
+  const messages: { chatId: number; text: string }[] = [];
+  for (const l of links ?? []) {
+    if (messages.length >= limit) break;
+    const { data: prog } = await db.from("progress").select("data").eq("user_id", l.user_id).maybeSingle();
+    const pdata = (prog?.data ?? {}) as Record<string, unknown>;
+    if (!pdata.melio_memory && !pdata.weaknessAxis) continue; // только с диагнозом
+    const last = Number(pdata.tg_last_checkin ?? 0);
+    if (last && last > cutoff) continue; // ещё рано
+    try {
+      const memory = pdata.melio_memory ?? buildInitialMemory({});
+      const res = await runMelioCheckin(memory, usage);
+      const text = String(res?.text ?? "").trim();
+      if (!text) continue;
+      await db.from("progress").upsert({
+        user_id: l.user_id,
+        data: { ...pdata, tg_last_checkin: Date.now() },
+        updated_at: new Date().toISOString(),
+      });
+      messages.push({ chatId: l.chat_id, text });
+    } catch (e) {
+      console.error("checkin gen:", e instanceof Error ? e.message : String(e));
+    }
+  }
+  return { status: "ok", messages, usage };
 }
 
 async function tgEntitlement(body: { chatId?: number; product?: string }) {
